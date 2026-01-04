@@ -33,7 +33,7 @@ class HeartbeatService {
 
   /// Start sending periodic heartbeats.
   ///
-  /// Only sends heartbeats if a name is configured.
+  /// Only sends heartbeats if name and token are configured.
   void start() {
     // Send initial heartbeat immediately
     _sendHeartbeat();
@@ -56,6 +56,12 @@ class HeartbeatService {
       return false;
     }
 
+    if (!_api.hasToken) {
+      // ignore: avoid_print
+      print('HeartbeatService: Skipping heartbeat - no token configured');
+      return false;
+    }
+
     // Get current activity state from IdleService
     final activityState = await IdleService.getUserActivityStatus();
     _lastActivityState = activityState;
@@ -64,7 +70,6 @@ class HeartbeatService {
       uuid: _settings.uuid,
       name: _settings.name,
       activityState: activityState,
-      token: _settings.token.isNotEmpty ? _settings.token : null,
     );
 
     // ignore: avoid_print

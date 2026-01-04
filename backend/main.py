@@ -5,15 +5,24 @@ from datetime import datetime, timedelta
 from typing import List, Optional, Dict
 
 import uvicorn
-from fastapi import FastAPI
+from fastapi import FastAPI, Depends, HTTPException, status
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.responses import JSONResponse
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from pydantic import BaseModel, Field
 
 # --- Config ---
 origins = ["*"]
 
-app = FastAPI()
+# API Token for authentication (set via environment variable or use default for dev)
+# In production, set this via: export API_TOKEN="your-secure-token"
+API_TOKEN = os.environ.get("API_TOKEN", "dev-token-change-me")
+
+app = FastAPI(
+    title="Online Status API",
+    description="API for tracking online/idle/offline status of users",
+    version="1.0.0",
+)
 app.add_middleware(
     CORSMiddleware,
     allow_origins=origins,
@@ -21,6 +30,22 @@ app.add_middleware(
     allow_methods=["*"],
     allow_headers=["*"],
 )
+
+# Security scheme for Bearer token
+security = HTTPBearer()
+
+
+def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
+    """Verify the Bearer token and return the token if valid."""
+    token = credentials.credentials
+    if token != API_TOKEN:
+        raise HTTPException(
+            status_code=status.HTTP_401_UNAUTHORIZED,
+            detail="Invalid or missing token",
+            headers={"WWW-Authenticate": "Bearer"},
+        )
+    return token
+
 
 # =====================================================================
 # FEATURE FLAGS
@@ -147,8 +172,10 @@ def get_real_friends_list() -> List[dict]:
 # --- Endpoints ---
 
 @app.post("/heartbeat/", response_model=HeartbeatResponse)
-async def post_heartbeat(request: HeartbeatRequest):
+async def post_heartbeat(request: HeartbeatRequest, token: str = Depends(verify_token)):
     """Receive a heartbeat from a frontend client.
+
+    Requires Bearer token authentication.
 
     This updates the user's last_seen timestamp, making them appear online
     to other users who fetch the online_status endpoint.
@@ -172,8 +199,10 @@ async def post_heartbeat(request: HeartbeatRequest):
 
 
 @app.get("/online_status/", response_class=JSONResponse)
-async def get_online_status():
+async def get_online_status(token: str = Depends(verify_token)):
     """Return the current friend online status list.
+
+    Requires Bearer token authentication.
 
     When USE_MOCK_DATA is True, returns mock data with optional randomization.
     When USE_MOCK_DATA is False, returns real data based on heartbeats.

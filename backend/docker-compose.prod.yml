@@ -1,0 +1,26 @@
+# Docker Compose Override for Production (HTTPS)
+# ===============================================
+# Usage: docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+#
+# Prerequisites:
+#   1. Place SSL certificates in this directory:
+#      - cert.pem (certificate)
+#      - privkey.pem (private key)
+#   2. Set API_TOKEN in .env or environment
+#   3. Optionally set HTTPS_PORT (default: 8443)
+#
+# Example with custom port:
+#   HTTPS_PORT=9000 docker-compose -f docker-compose.yml -f docker-compose.prod.yml up
+
+version: '3.8'
+
+services:
+  backend:
+    volumes:
+      - ./cert.pem:/app/cert.pem:ro
+      - ./privkey.pem:/app/privkey.pem:ro
+    ports:
+      - "${HTTPS_PORT:-8443}:8000"
+    healthcheck:
+      test: ["CMD", "curl", "-f", "-k", "https://localhost:8000/healthz"]
+

@@ -8,6 +8,9 @@ Run the backend first with: python main.py
 Usage:
     python test_backend.py
 
+    # Or with custom token:
+    API_TOKEN=your-token python test_backend.py
+
 Commands:
     1. Send heartbeat for test user (online)
     2. Send heartbeat for test user (idle/AFK)
@@ -19,18 +22,28 @@ Commands:
     8. Simulate user becoming active
     9. Toggle mock mode
     10. Add second test user
+    11. Change API token
     0. Exit
 """
 
 import requests
 import uuid
 import sys
+import os
 
-BASE_URL = "http://localhost:8000"
+BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000")
+
+# API Token - default matches the dev token in main.py
+API_TOKEN = os.environ.get("API_TOKEN", "dev-token-change-me")
 
 # Generate a test UUID (or use a fixed one for consistent testing)
 TEST_UUID = str(uuid.uuid4())
 TEST_NAME = "TestUser"
+
+
+def get_headers():
+    """Get authorization headers with Bearer token."""
+    return {"Authorization": f"Bearer {API_TOKEN}"}
 
 
 def send_heartbeat(user_uuid: str = TEST_UUID, name: str = TEST_NAME, activity_state: str = "online"):
@@ -38,8 +51,12 @@ def send_heartbeat(user_uuid: str = TEST_UUID, name: str = TEST_NAME, activity_s
     try:
         resp = requests.post(
             f"{BASE_URL}/heartbeat/",
-            json={"uuid": user_uuid, "name": name, "activity_state": activity_state}
+            json={"uuid": user_uuid, "name": name, "activity_state": activity_state},
+            headers=get_headers()
         )
+        if resp.status_code == 401:
+            print(f"✗ Unauthorized - check your API token")
+            return
         resp.raise_for_status()
         print(f"✓ Heartbeat sent: {resp.json()}")
     except Exception as e:
@@ -49,7 +66,10 @@ def send_heartbeat(user_uuid: str = TEST_UUID, name: str = TEST_NAME, activity_s
 def get_online_status():
     """Fetch the current online status list."""
     try:
-        resp = requests.get(f"{BASE_URL}/online_status/")
+        resp = requests.get(f"{BASE_URL}/online_status/", headers=get_headers())
+        if resp.status_code == 401:
+            print(f"✗ Unauthorized - check your API token")
+            return
         resp.raise_for_status()
         data = resp.json()
         friends = data.get("friends", [])
@@ -170,6 +190,17 @@ def toggle_mock_mode():
         print(f"✗ Error: {e}")
 
 
+def change_token():
+    """Change the API token."""
+    global API_TOKEN
+    new_token = input("Enter new API token: ").strip()
+    if new_token:
+        API_TOKEN = new_token
+        print(f"✓ Token updated")
+    else:
+        print("✗ Token not changed (empty input)")
+
+
 def main():
     print(f"""
 ╔══════════════════════════════════════════════════╗
@@ -177,6 +208,8 @@ def main():
 ╠══════════════════════════════════════════════════╣
 ║  Test UUID: {TEST_UUID[:8]}...                    ║
 ║  Test Name: {TEST_NAME:<20}               ║
+║  Base URL:  {BASE_URL:<27} ║
+║  Token:     {API_TOKEN[:20]}{"..." if len(API_TOKEN) > 20 else " "*(24-len(API_TOKEN))} ║
 ╚══════════════════════════════════════════════════╝
 
 AFK Detection Logic:
@@ -188,6 +221,10 @@ States:
   🟢 online  = Active (recent input)
   🟡 idle    = AFK (no input for 5+ min, but still connected)
   🔴 offline = Disconnected (no heartbeat for 5+ min)
+  
+Authentication:
+  All /heartbeat/ and /online_status/ endpoints require Bearer token.
+  Debug endpoints (/debug/*) do not require authentication.
 """)
 
     while True:
@@ -202,6 +239,7 @@ States:
         print("  8. Simulate test user becoming active")
         print("  9. Toggle mock mode")
         print("  10. Add second test user")
+        print("  11. Change API token")
         print("  0. Exit")
 
         choice = input("\nChoice: ").strip()
@@ -229,6 +267,8 @@ States:
             second_uuid = str(uuid.uuid4())
             send_heartbeat(second_uuid, "SecondUser", "online")
             print(f"  (UUID: {second_uuid[:8]}...)")
+        elif choice == "11":
+            change_token()
         elif choice == "0":
             print("Bye!")
             sys.exit(0)

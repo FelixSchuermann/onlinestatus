@@ -1,18 +1,13 @@
 import 'dart:io';
 import 'dart:async';
-import 'dart:convert';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:desktop_multi_window/desktop_multi_window.dart';
 import 'package:window_manager/window_manager.dart';
 
 class NotificationService {
   static final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
   static bool _initialized = false;
   static bool _pluginAvailable = false;
-
-  // Feature flag for multi-window toast popups (disabled for now - causes issues)
-  static const bool _enableMultiWindowToast = false;
 
   // Optional navigator key to get an OverlayState for desktop toasts
   static GlobalKey<NavigatorState>? _navigatorKey;
@@ -64,33 +59,8 @@ class NotificationService {
       }
     }
 
-    // Try desktop_multi_window toast on Windows/Linux (behind feature flag)
-    if (!shownSystem && _enableMultiWindowToast && (Platform.isWindows || Platform.isLinux)) {
-      try {
-        final args = jsonEncode({'title': title, 'body': body, 'durationMs': 3000});
-        // ignore: avoid_print
-        print('NotificationService: creating toast window with args=$args');
-
-        final config = WindowConfiguration(arguments: args, hiddenAtLaunch: true);
-        final window = await WindowController.create(config);
-
-        // Show the toast window - size is controlled by the sub-window app
-        await window.show();
-
-        shownSystem = true;
-        // ignore: avoid_print
-        print('NotificationService: toast window created successfully');
-        return;
-      } catch (e, st) {
-        // ignore: avoid_print
-        print('NotificationService: desktop_multi_window failed: $e');
-        // ignore: avoid_print
-        print(st);
-      }
-    }
-
     // Fallback to overlay toast (if main window visible)
-    if (Platform.isWindows || Platform.isLinux) {
+    if (!shownSystem && (Platform.isWindows || Platform.isLinux)) {
       try {
         bool isVisible = true;
         try {

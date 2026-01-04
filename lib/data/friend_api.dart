@@ -2,8 +2,12 @@ import 'package:dio/dio.dart';
 
 import '../models/friend.dart';
 
+/// API client for the Online Status backend.
+///
+/// All requests require a valid Bearer token for authentication.
 class FriendApiClient {
   final Dio _dio;
+  String? _token;
 
   FriendApiClient({Dio? dio}) : _dio = dio ?? Dio();
 
@@ -13,8 +17,29 @@ class FriendApiClient {
     _dio.options.baseUrl = baseUrl;
   }
 
+  /// Set the authentication token for all requests.
+  void setToken(String? token) {
+    _token = token;
+  }
+
+  /// Get authorization headers with Bearer token.
+  Map<String, String> _getAuthHeaders() {
+    final headers = <String, String>{};
+    if (_token != null && _token!.isNotEmpty) {
+      headers['Authorization'] = 'Bearer $_token';
+    }
+    return headers;
+  }
+
+  /// Fetch the list of friends and their online status.
+  ///
+  /// Requires authentication token to be set via [setToken].
+  /// Throws [DioException] if request fails (including 401 Unauthorized).
   Future<List<Friend>> fetchFriends() async {
-    final resp = await _dio.get('/online_status/');
+    final resp = await _dio.get(
+      '/online_status/',
+      options: Options(headers: _getAuthHeaders()),
+    );
     final data = resp.data as Map<String, dynamic>;
     final friends = (data['friends'] as List<dynamic>)
         .map((m) => Friend.fromMap(Map<String, dynamic>.from(m as Map)))
@@ -27,19 +52,15 @@ class FriendApiClient {
   /// [uuid] - Unique identifier for this client instance
   /// [name] - Display name of the user
   /// [activityState] - User's activity state: "online", "idle", or "unknown"
-  /// [token] - Optional auth token (for future use)
+  ///
+  /// Requires authentication token to be set via [setToken].
+  /// Returns true if heartbeat was sent successfully.
   Future<bool> sendHeartbeat({
     required String uuid,
     required String name,
     String activityState = 'online',
-    String? token,
   }) async {
     try {
-      final headers = <String, String>{};
-      if (token != null && token.isNotEmpty) {
-        headers['Authorization'] = 'Bearer $token';
-      }
-
       final payload = {
         'uuid': uuid,
         'name': name,
@@ -49,7 +70,7 @@ class FriendApiClient {
       final resp = await _dio.post(
         '/heartbeat/',
         data: payload,
-        options: Options(headers: headers),
+        options: Options(headers: _getAuthHeaders()),
       );
 
       return resp.statusCode == 200;
@@ -61,19 +82,6 @@ class FriendApiClient {
     }
   }
 
-  /// Legacy method - kept for compatibility but use sendHeartbeat instead
-  @Deprecated('Use sendHeartbeat instead')
-  Future<void> sendPresence(String name, {String? token}) async {
-    final headers = <String, String>{};
-    if (token != null && token.isNotEmpty) {
-      headers['Authorization'] = 'Bearer $token';
-    }
-    final payload = {
-      'name': name,
-      'state': 'online',
-      'last_seen': '${DateTime.now().toIso8601String()}Z'
-    };
-    await _dio.post('/online_status/',
-        data: {'friends': [payload]}, options: Options(headers: headers));
-  }
+  /// Check if the client has a valid token configured.
+  bool get hasToken => _token != null && _token!.isNotEmpty;
 }

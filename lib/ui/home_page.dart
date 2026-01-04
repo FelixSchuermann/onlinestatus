@@ -202,7 +202,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               const SizedBox(height: 8),
               TextFormField(
                 controller: tokenController,
-                decoration: const InputDecoration(labelText: 'Token (optional)'),
+                decoration: const InputDecoration(labelText: 'Access Token'),
                 obscureText: true,
               ),
               const SizedBox(height: 12),
