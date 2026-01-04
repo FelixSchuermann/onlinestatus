@@ -46,7 +46,12 @@ Future<void> main(List<String> args) async {
   // Initialize window manager early so UI can call windowManager.hide()
   if (Platform.isWindows || Platform.isLinux) {
     await windowManager.ensureInitialized();
-    WindowOptions windowOptions = const WindowOptions();
+    WindowOptions windowOptions = const WindowOptions(
+      size: Size(400, 500),
+      minimumSize: Size(300, 400),
+      center: true,
+      title: 'Online Status',
+    );
     windowManager.waitUntilReadyToShow(windowOptions, () async {
       await windowManager.show();
       await windowManager.focus();

@@ -8,6 +8,10 @@ import 'package:system_tray/system_tray.dart';
 class TrayService {
   final SystemTray _systemTray = SystemTray();
   bool _initialized = false;
+  
+  // Store callbacks
+  void Function()? _onShow;
+  void Function()? _onQuit;
 
   // 1x1 transparent PNG base64 (used as fallback icon when assets missing)
   static const _kFallbackPngBase64 =
@@ -16,6 +20,9 @@ class TrayService {
   Future<void> init({required void Function() onShow, required void Function() onQuit}) async {
     if (!(Platform.isWindows || Platform.isLinux)) return;
     if (_initialized) return;
+    
+    _onShow = onShow;
+    _onQuit = onQuit;
 
     try {
       String? iconPath = await _resolveIconPath();
@@ -37,18 +44,26 @@ class TrayService {
         print('TrayService: using fallback icon at $iconPath');
       }
 
-      final menu = Menu();
-      await menu.buildFrom([
-        MenuItemLabel(label: 'Open', onClicked: (_) => onShow()),
-        MenuItemLabel(label: 'Quit', onClicked: (_) => onQuit()),
-      ]);
+      // Initialize system tray with the icon
+      await _systemTray.initSystemTray(
+        title: "OnlineStatus",
+        iconPath: iconPath,
+        toolTip: "Online Status App",
+      );
+      
+      // Create popup menu items
+      final List<MenuItemBase> menuItems = [
+        MenuItem(label: 'Open', onClicked: () => _onShow?.call()),
+        MenuSeparator(),
+        MenuItem(label: 'Quit', onClicked: () => _onQuit?.call()),
+      ];
+      
+      await _systemTray.setContextMenu(menuItems);
 
-      await _systemTray.initSystemTray(title: "OnlineStatus", iconPath: iconPath);
-      await _systemTray.setContextMenu(menu);
-
+      // Register click handler
       _systemTray.registerSystemTrayEventHandler((eventName) {
-        if (eventName == kSystemTrayEventClick) {
-          onShow();
+        if (eventName == 'leftMouseUp' || eventName == 'click') {
+          _onShow?.call();
         }
       });
 
@@ -65,12 +80,14 @@ class TrayService {
   Future<void> dispose() async {
     if (!_initialized) return;
     try {
-      await _systemTray.destroy();
+      // Note: system_tray 0.1.1 doesn't have a destroy method, just reset state
+      _initialized = false;
+      _onShow = null;
+      _onQuit = null;
     } catch (e) {
       // ignore: avoid_print
       print('TrayService.dispose error: $e');
     }
-    _initialized = false;
   }
 
   // Try to find a usable icon path. Preference order:

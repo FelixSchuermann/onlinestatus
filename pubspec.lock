@@ -625,10 +625,10 @@ packages:
     dependency: "direct main"
     description:
       name: system_tray
-      sha256: "40444e5de8ed907822a98694fd031b8accc3cb3c0baa547634ce76189cf3d9cf"
+      sha256: "1bcc11bc230033be20d7443c29f65f68d67169715a838a1122f20fbff5dd2d19"
       url: "https://pub.dev"
     source: hosted
-    version: "2.0.3"
+    version: "0.1.1"
   term_glyph:
     dependency: transitive
     description:
@@ -678,7 +678,7 @@ packages:
     source: hosted
     version: "1.4.0"
   uuid:
-    dependency: transitive
+    dependency: "direct main"
     description:
       name: uuid
       sha256: "648e103079f7c64a36dc7d39369cabb358d377078a051d6ae2ad3aa539519313"
