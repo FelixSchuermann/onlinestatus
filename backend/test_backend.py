@@ -27,14 +27,21 @@ Commands:
 """
 
 import requests
+import urllib3
 import uuid
 import sys
 import os
 
-BASE_URL = os.environ.get("BASE_URL", "http://localhost:8000")
+# Disable SSL warnings for self-signed certificates
+urllib3.disable_warnings(urllib3.exceptions.InsecureRequestWarning)
+
+# Set to False to skip SSL certificate verification (for self-signed certs)
+VERIFY_SSL = False
+
+BASE_URL = os.environ.get("BASE_URL", "https://79.133.50.43:8443")
 
 # API Token - default matches the dev token in main.py
-API_TOKEN = os.environ.get("API_TOKEN", "dev-token-change-me")
+API_TOKEN = os.environ.get("API_TOKEN", "e0ee13c95baad6354422ad4217db9faad7439447335ea8fd86d52c4d433cb9e3")
 
 # Generate a test UUID (or use a fixed one for consistent testing)
 TEST_UUID = str(uuid.uuid4())
@@ -52,7 +59,8 @@ def send_heartbeat(user_uuid: str = TEST_UUID, name: str = TEST_NAME, activity_s
         resp = requests.post(
             f"{BASE_URL}/heartbeat/",
             json={"uuid": user_uuid, "name": name, "activity_state": activity_state},
-            headers=get_headers()
+            headers=get_headers(),
+            verify=VERIFY_SSL
         )
         if resp.status_code == 401:
             print(f"✗ Unauthorized - check your API token")
@@ -66,7 +74,7 @@ def send_heartbeat(user_uuid: str = TEST_UUID, name: str = TEST_NAME, activity_s
 def get_online_status():
     """Fetch the current online status list."""
     try:
-        resp = requests.get(f"{BASE_URL}/online_status/", headers=get_headers())
+        resp = requests.get(f"{BASE_URL}/online_status/", headers=get_headers(), verify=VERIFY_SSL)
         if resp.status_code == 401:
             print(f"✗ Unauthorized - check your API token")
             return
@@ -95,7 +103,10 @@ def get_online_status():
 def debug_users():
     """Show debug info for all users."""
     try:
-        resp = requests.get(f"{BASE_URL}/debug/users")
+        resp = requests.get(f"{BASE_URL}/debug/users", headers=get_headers(), verify=VERIFY_SSL)
+        if resp.status_code == 401:
+            print(f"✗ Unauthorized - check your API token")
+            return
         resp.raise_for_status()
         data = resp.json()
         print(f"\n{'='*50}")
@@ -127,7 +138,10 @@ def debug_users():
 def clear_users():
     """Clear all user data."""
     try:
-        resp = requests.post(f"{BASE_URL}/debug/clear_users")
+        resp = requests.post(f"{BASE_URL}/debug/clear_users", headers=get_headers(), verify=VERIFY_SSL)
+        if resp.status_code == 401:
+            print(f"✗ Unauthorized - check your API token")
+            return
         resp.raise_for_status()
         print(f"✓ {resp.json()['message']}")
     except Exception as e:
@@ -137,7 +151,10 @@ def clear_users():
 def simulate_offline(user_uuid: str):
     """Simulate a user going offline."""
     try:
-        resp = requests.post(f"{BASE_URL}/debug/simulate_offline/{user_uuid}")
+        resp = requests.post(f"{BASE_URL}/debug/simulate_offline/{user_uuid}", headers=get_headers(), verify=VERIFY_SSL)
+        if resp.status_code == 401:
+            print(f"✗ Unauthorized - check your API token")
+            return
         if resp.status_code == 404:
             print(f"✗ User not found: {user_uuid}")
         else:
@@ -150,7 +167,10 @@ def simulate_offline(user_uuid: str):
 def simulate_idle(user_uuid: str):
     """Simulate a user going idle (AFK)."""
     try:
-        resp = requests.post(f"{BASE_URL}/debug/simulate_idle/{user_uuid}")
+        resp = requests.post(f"{BASE_URL}/debug/simulate_idle/{user_uuid}", headers=get_headers(), verify=VERIFY_SSL)
+        if resp.status_code == 401:
+            print(f"✗ Unauthorized - check your API token")
+            return
         if resp.status_code == 404:
             print(f"✗ User not found: {user_uuid}")
         else:
@@ -163,7 +183,10 @@ def simulate_idle(user_uuid: str):
 def simulate_active(user_uuid: str):
     """Simulate a user becoming active again."""
     try:
-        resp = requests.post(f"{BASE_URL}/debug/simulate_active/{user_uuid}")
+        resp = requests.post(f"{BASE_URL}/debug/simulate_active/{user_uuid}", headers=get_headers(), verify=VERIFY_SSL)
+        if resp.status_code == 401:
+            print(f"✗ Unauthorized - check your API token")
+            return
         if resp.status_code == 404:
             print(f"✗ User not found: {user_uuid}")
         else:
@@ -174,20 +197,23 @@ def simulate_active(user_uuid: str):
 
 
 def toggle_mock_mode():
-    """Toggle mock mode on/off."""
-    try:
-        # First get current state
-        resp = requests.get(f"{BASE_URL}/debug/users")
-        resp.raise_for_status()
-        current_mock = resp.json()["use_mock_data"]
-
-        # Toggle it
-        new_state = not current_mock
-        resp = requests.post(f"{BASE_URL}/debug/set_mock_mode/{str(new_state).lower()}")
-        resp.raise_for_status()
-        print(f"✓ Mock mode: {resp.json()['use_mock_data']}")
-    except Exception as e:
-        print(f"✗ Error: {e}")
+    """Toggle mock mode on/off. (DISABLED IN PRODUCTION)"""
+    print("✗ This endpoint is disabled in production")
+    return
+    # Uncomment below if endpoint is re-enabled on the server
+    # try:
+    #     # First get current state
+    #     resp = requests.get(f"{BASE_URL}/debug/users", headers=get_headers(), verify=VERIFY_SSL)
+    #     resp.raise_for_status()
+    #     current_mock = resp.json()["use_mock_data"]
+    #
+    #     # Toggle it
+    #     new_state = not current_mock
+    #     resp = requests.post(f"{BASE_URL}/debug/set_mock_mode/{str(new_state).lower()}", headers=get_headers(), verify=VERIFY_SSL)
+    #     resp.raise_for_status()
+    #     print(f"✓ Mock mode: {resp.json()['use_mock_data']}")
+    # except Exception as e:
+    #     print(f"✗ Error: {e}")
 
 
 def change_token():

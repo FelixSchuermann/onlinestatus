@@ -1,18 +1,39 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 
 import '../models/friend.dart';
 
 /// API client for the Online Status backend.
 ///
 /// All requests require a valid Bearer token for authentication.
+/// Supports HTTPS with self-signed certificates.
 class FriendApiClient {
   final Dio _dio;
   String? _token;
 
-  FriendApiClient({Dio? dio}) : _dio = dio ?? Dio();
+  FriendApiClient({Dio? dio}) : _dio = dio ?? _createDio();
 
-  /// Set the base url to your backend, e.g. http://10.0.2.2:8000 for Android emulator,
-  /// or http://localhost:8000 for web/desktop.
+  /// Create a Dio instance that accepts self-signed certificates.
+  static Dio _createDio() {
+    final dio = Dio();
+
+    // Allow self-signed certificates for HTTPS
+    // This is needed when using self-signed certs on the server
+    (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+      final client = HttpClient();
+      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+        // Accept all certificates (for self-signed certs)
+        // In production with proper certs, you might want to be more strict
+        return true;
+      };
+      return client;
+    };
+
+    return dio;
+  }
+
+  /// Set the base url to your backend, e.g. https://example.com:8443
   void setBaseUrl(String baseUrl) {
     _dio.options.baseUrl = baseUrl;
   }

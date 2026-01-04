@@ -18,10 +18,18 @@ origins = ["*"]
 # In production, set this via: export API_TOKEN="your-secure-token"
 API_TOKEN = os.environ.get("API_TOKEN", "dev-token-change-me")
 
+# Production mode: disable docs/redoc pages
+# Set ENABLE_DOCS=true to enable them (for development)
+ENABLE_DOCS = os.environ.get("ENABLE_DOCS", "false").lower() == "true"
+
 app = FastAPI(
     title="Online Status API",
     description="API for tracking online/idle/offline status of users",
     version="1.0.0",
+    # Disable docs in production
+    docs_url="/docs" if ENABLE_DOCS else None,
+    redoc_url="/redoc" if ENABLE_DOCS else None,
+    openapi_url="/openapi.json" if ENABLE_DOCS else None,
 )
 app.add_middleware(
     CORSMiddleware,
@@ -226,11 +234,11 @@ async def healthz():
 
 
 # =====================================================================
-# DEBUG / TEST ENDPOINTS (for local testing)
+# DEBUG / TEST ENDPOINTS (protected with token authentication)
 # =====================================================================
 
 @app.get("/debug/users", response_class=JSONResponse)
-async def debug_get_users():
+async def debug_get_users(token: str = Depends(verify_token)):
     """Debug endpoint: Show all registered users and their heartbeat data."""
     users = []
     now = datetime.utcnow()
@@ -264,14 +272,14 @@ async def debug_get_users():
 
 
 @app.post("/debug/clear_users")
-async def debug_clear_users():
+async def debug_clear_users(token: str = Depends(verify_token)):
     """Debug endpoint: Clear all user heartbeat data."""
     USER_HEARTBEATS.clear()
     return {"success": True, "message": "All user data cleared"}
 
 
 @app.post("/debug/simulate_offline/{uuid}")
-async def debug_simulate_offline(uuid: str):
+async def debug_simulate_offline(uuid: str, token: str = Depends(verify_token)):
     """Debug endpoint: Simulate a user going offline by setting their last_seen to 10 minutes ago."""
     if uuid not in USER_HEARTBEATS:
         return JSONResponse(status_code=404, content={"error": f"User {uuid} not found"})
@@ -281,7 +289,7 @@ async def debug_simulate_offline(uuid: str):
 
 
 @app.post("/debug/simulate_idle/{uuid}")
-async def debug_simulate_idle(uuid: str):
+async def debug_simulate_idle(uuid: str, token: str = Depends(verify_token)):
     """Debug endpoint: Simulate a user going idle (AFK) by setting their activity_state to idle."""
     if uuid not in USER_HEARTBEATS:
         return JSONResponse(status_code=404, content={"error": f"User {uuid} not found"})
@@ -292,7 +300,7 @@ async def debug_simulate_idle(uuid: str):
 
 
 @app.post("/debug/simulate_active/{uuid}")
-async def debug_simulate_active(uuid: str):
+async def debug_simulate_active(uuid: str, token: str = Depends(verify_token)):
     """Debug endpoint: Simulate a user becoming active again."""
     if uuid not in USER_HEARTBEATS:
         return JSONResponse(status_code=404, content={"error": f"User {uuid} not found"})
@@ -302,12 +310,15 @@ async def debug_simulate_active(uuid: str):
     return {"success": True, "message": f"User {uuid} simulated as active"}
 
 
-@app.post("/debug/set_mock_mode/{enabled}")
-async def debug_set_mock_mode(enabled: bool):
-    """Debug endpoint: Toggle mock mode on/off at runtime."""
-    global USE_MOCK_DATA
-    USE_MOCK_DATA = enabled
-    return {"success": True, "use_mock_data": USE_MOCK_DATA}
+# =====================================================================
+# DISABLED FOR PRODUCTION - Uncomment if needed for development
+# =====================================================================
+# @app.post("/debug/set_mock_mode/{enabled}")
+# async def debug_set_mock_mode(enabled: bool, token: str = Depends(verify_token)):
+#     """Debug endpoint: Toggle mock mode on/off at runtime."""
+#     global USE_MOCK_DATA
+#     USE_MOCK_DATA = enabled
+#     return {"success": True, "use_mock_data": USE_MOCK_DATA}
 
 
 if __name__ == "__main__":
