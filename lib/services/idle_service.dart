@@ -6,19 +6,26 @@ import 'package:ffi/ffi.dart';
 ///
 /// Platform support:
 /// - Windows: Uses GetLastInputInfo via FFI (accurate)
-/// - Linux: Not supported (returns 'unknown') due to X11/FFI stability issues
+/// - Linux: Uses xprintidle command (requires: sudo apt install xprintidle)
 /// - macOS: Not supported (returns 'unknown')
 class IdleService {
   // Threshold in seconds after which user is considered AFK
   static const int afkThresholdSeconds = 300; // 5 minutes
+
+  // Cache to avoid too many shell calls on Linux
+  static int? _cachedIdleTime;
+  static DateTime? _lastCheck;
+  static const _cacheDuration = Duration(seconds: 2);
 
   /// Returns the number of seconds since the last user input (mouse/keyboard).
   /// Returns -1 if detection is not supported or fails.
   static Future<int> getIdleTimeSeconds() async {
     if (Platform.isWindows) {
       return _getWindowsIdleTime();
+    } else if (Platform.isLinux) {
+      return await _getLinuxIdleTime();
     }
-    // Linux/macOS: Not supported
+    // macOS: Not supported
     return -1;
   }
 
@@ -45,6 +52,44 @@ class IdleService {
     }
     final threshold = thresholdSeconds ?? afkThresholdSeconds;
     return idleTime >= threshold ? 'idle' : 'online';
+  }
+
+  // --- Linux Implementation using xprintidle ---
+  static Future<int> _getLinuxIdleTime() async {
+    // Use cache to avoid too many shell calls
+    final now = DateTime.now();
+    if (_lastCheck != null && _cachedIdleTime != null &&
+        now.difference(_lastCheck!) < _cacheDuration) {
+      return _cachedIdleTime!;
+    }
+
+    try {
+      // xprintidle returns idle time in milliseconds
+      // Install with: sudo apt install xprintidle
+      final result = await Process.run('xprintidle', []);
+
+      if (result.exitCode == 0) {
+        final idleMs = int.tryParse(result.stdout.toString().trim());
+        if (idleMs != null) {
+          final idleSeconds = idleMs ~/ 1000;
+          _cachedIdleTime = idleSeconds;
+          _lastCheck = now;
+          return idleSeconds;
+        }
+      } else {
+        // xprintidle not installed or failed
+        // ignore: avoid_print
+        print('IdleService: xprintidle failed (exit code ${result.exitCode}). Install with: sudo apt install xprintidle');
+      }
+      return -1;
+    } catch (e) {
+      // xprintidle probably not installed
+      // ignore: avoid_print
+      print('IdleService: Linux idle detection failed: $e');
+      // ignore: avoid_print
+      print('IdleService: Install xprintidle with: sudo apt install xprintidle');
+      return -1;
+    }
   }
 
   // --- Windows FFI Implementation ---
