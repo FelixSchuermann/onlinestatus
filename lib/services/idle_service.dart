@@ -17,7 +17,11 @@ class IdleService {
     if (Platform.isWindows) {
       return _getWindowsIdleTime();
     } else if (Platform.isLinux) {
-      return _getLinuxIdleTime();
+      // Linux X11 idle detection is disabled due to stability issues (segfaults)
+      // Would need libXss.so.1 installed: sudo apt install libxss1
+      // ignore: avoid_print
+      print('IdleService: Linux idle detection disabled for stability');
+      return -1;
     }
     return -1; // Not supported on this platform
   }
