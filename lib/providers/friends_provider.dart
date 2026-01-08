@@ -57,6 +57,12 @@ final friendsProvider = StreamProvider.autoDispose<List<Friend>>((ref) {
   final controller = StreamController<List<Friend>>();
   Timer? timer;
 
+  // Store current token to detect changes
+  final currentToken = ref.watch(settingsProvider.select((s) => s.token));
+
+  // ignore: avoid_print
+  print('friendsProvider: Starting with token length=${currentToken.length}');
+
   Future<void> start() async {
     // Don't fetch if no token is configured
     if (!api.hasToken) {
