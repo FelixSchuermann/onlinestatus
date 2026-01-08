@@ -44,10 +44,12 @@ class _HomePageState extends ConsumerState<HomePage> {
       final status = await IdleService.getUserActivityStatus();
       _logSync('Got status: $status');
       if (mounted) {
+        _logSync('About to call setState');
         setState(() {
           _idleSeconds = seconds;
           _idleStatus = status;
         });
+        _logSync('setState completed');
       }
       await Future.delayed(const Duration(seconds: 5));
     }
@@ -55,10 +57,15 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
+    _logSync('build() called');
+
     // Start heartbeat service (auto-disposed when not watched)
+    _logSync('About to watch heartbeatServiceProvider');
     ref.watch(heartbeatServiceProvider);
+    _logSync('heartbeatServiceProvider watched');
 
     // Register listener during build (allowed). This will be correctly managed by Riverpod.
+    _logSync('About to register friendsProvider listener');
     ref.listen<AsyncValue<List<Friend>>>(friendsProvider, (previous, next) {
       final prevList = previous?.whenOrNull(data: (d) => d);
       final nextList = next.whenOrNull(data: (d) => d);
@@ -73,10 +80,17 @@ class _HomePageState extends ConsumerState<HomePage> {
         }
       }
     });
+    _logSync('friendsProvider listener registered');
 
+    _logSync('About to watch friendsProvider');
     final asyncFriends = ref.watch(friendsProvider);
-    final settings = ref.watch(settingsProvider);
+    _logSync('friendsProvider watched: ${asyncFriends.runtimeType}');
 
+    _logSync('About to watch settingsProvider');
+    final settings = ref.watch(settingsProvider);
+    _logSync('settingsProvider watched');
+
+    _logSync('About to return Scaffold');
     return Scaffold(
       appBar: AppBar(
         title: Column(
