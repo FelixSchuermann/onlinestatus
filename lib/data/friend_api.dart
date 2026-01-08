@@ -19,16 +19,22 @@ class FriendApiClient {
     final dio = Dio();
 
     // Allow self-signed certificates for HTTPS
-    // This is needed when using self-signed certs on the server
-    (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
-      final client = HttpClient();
-      client.badCertificateCallback = (X509Certificate cert, String host, int port) {
-        // Accept all certificates (for self-signed certs)
-        // In production with proper certs, you might want to be more strict
-        return true;
-      };
-      return client;
-    };
+    // Only configure on Windows - Linux has issues with IOHttpClientAdapter
+    if (Platform.isWindows) {
+      try {
+        (dio.httpClientAdapter as IOHttpClientAdapter).createHttpClient = () {
+          final client = HttpClient();
+          client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+            // Accept all certificates (for self-signed certs)
+            return true;
+          };
+          return client;
+        };
+      } catch (e) {
+        // ignore: avoid_print
+        print('FriendApiClient: Could not configure self-signed cert support: $e');
+      }
+    }
 
     return dio;
   }
