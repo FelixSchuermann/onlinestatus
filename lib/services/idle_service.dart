@@ -1,8 +1,14 @@
+import 'dart:io';
+
+// Conditional import for Windows FFI
+import 'idle_service_windows.dart' if (dart.library.io) 'idle_service_windows.dart';
 
 /// Service to detect if the user is idle (AFK) or active at the computer.
 ///
-/// Note: Currently disabled on all platforms due to FFI stability issues.
-/// Returns 'unknown' status which means the heartbeat will report 'online'.
+/// Platform support:
+/// - Windows: Uses GetLastInputInfo via FFI (accurate)
+/// - Linux: Not supported (returns 'unknown') due to X11/FFI stability issues
+/// - macOS: Not supported (returns 'unknown')
 class IdleService {
   // Threshold in seconds after which user is considered AFK
   static const int afkThresholdSeconds = 300; // 5 minutes
@@ -10,8 +16,18 @@ class IdleService {
   /// Returns the number of seconds since the last user input (mouse/keyboard).
   /// Returns -1 if detection is not supported or fails.
   static Future<int> getIdleTimeSeconds() async {
-    // Idle detection disabled due to FFI stability issues on Linux
-    // TODO: Re-enable with a stable cross-platform solution
+    if (Platform.isWindows) {
+      try {
+        return WindowsIdleDetector.getIdleTimeSeconds();
+      } catch (e) {
+        // ignore: avoid_print
+        print('IdleService: Windows idle detection failed: $e');
+        return -1;
+      }
+    }
+
+    // Linux/macOS: Not supported
+    // Linux X11 FFI causes segfaults, so we disable it
     return -1;
   }
 
@@ -41,5 +57,3 @@ class IdleService {
     return idleTime >= threshold ? 'idle' : 'online';
   }
 }
-
-
