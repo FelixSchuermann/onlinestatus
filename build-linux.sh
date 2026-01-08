@@ -20,7 +20,7 @@ docker run --rm \
     -v "$SCRIPT_DIR:/app" \
     -w /app \
     "$IMAGE_NAME" \
-    flutter build linux --release
+    sh -c "flutter pub get && flutter build linux --release"
 
 echo ""
 echo "=== Build complete ==="

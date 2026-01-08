@@ -42,6 +42,6 @@ RUN git clone https://github.com/flutter/flutter.git -b stable $FLUTTER_HOME \
 
 WORKDIR /app
 
-# Default command
-CMD ["flutter", "build", "linux", "--release"]
+# Default command - first get dependencies, then build
+CMD ["sh", "-c", "flutter pub get && flutter build linux --release"]
 
