@@ -89,12 +89,34 @@ class IdleService {
   // --- Linux Implementation (X11 XScreenSaver Extension) ---
   static DynamicLibrary? _x11Lib;
   static DynamicLibrary? _xssLib;
+  static bool _linuxLibsChecked = false;
+  static bool _linuxLibsAvailable = false;
 
   static int _getLinuxIdleTime() {
+    // Check if we already know the libs are unavailable
+    if (_linuxLibsChecked && !_linuxLibsAvailable) {
+      return -1;
+    }
+
     try {
-      // Load X11 and Xss libraries
-      _x11Lib ??= DynamicLibrary.open('libX11.so.6');
-      _xssLib ??= DynamicLibrary.open('libXss.so.1');
+      // Try to load X11 and Xss libraries
+      if (!_linuxLibsChecked) {
+        _linuxLibsChecked = true;
+        try {
+          _x11Lib = DynamicLibrary.open('libX11.so.6');
+          _xssLib = DynamicLibrary.open('libXss.so.1');
+          _linuxLibsAvailable = true;
+        } catch (e) {
+          // ignore: avoid_print
+          print('IdleService: X11/Xss libraries not available (maybe running under Wayland or libs not installed): $e');
+          _linuxLibsAvailable = false;
+          return -1;
+        }
+      }
+
+      if (_x11Lib == null || _xssLib == null) {
+        return -1;
+      }
 
       // XOpenDisplay
       final xOpenDisplay = _x11Lib!.lookupFunction<
