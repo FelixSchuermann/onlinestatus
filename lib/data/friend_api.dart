@@ -80,8 +80,12 @@ class FriendApiClient {
   /// Requires authentication token to be set via [setToken].
   /// Throws [DioException] if request fails after retries.
   Future<List<Friend>> fetchFriends() async {
+    // Show masked token for debugging
+    final maskedToken = _token != null && _token!.length > 8
+        ? '${_token!.substring(0, 4)}...${_token!.substring(_token!.length - 4)}'
+        : '(empty)';
     // ignore: avoid_print
-    print('FriendApiClient.fetchFriends: baseUrl=${_dio.options.baseUrl}, hasToken=${_token?.isNotEmpty ?? false}');
+    print('FriendApiClient.fetchFriends: baseUrl=${_dio.options.baseUrl}, token=$maskedToken');
 
     Exception? lastError;
 
