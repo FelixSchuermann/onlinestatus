@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:async';
 import 'dart:io';
 
 import 'ui/home_page.dart';
@@ -9,79 +8,44 @@ import 'package:onlinestatus2/providers/friends_provider.dart';
 import 'package:onlinestatus2/services/notification_service.dart';
 import 'package:onlinestatus2/desktop/tray_service.dart';
 
-// Global navigator key so NotificationService can insert overlay toasts on desktop
+// Global navigator key for overlay toasts
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
 
-/// Log to file for debugging release builds
-Future<void> _logToFile(String message) async {
-  try {
-    final logFile = File('${Directory.systemTemp.path}/onlinestatus_log.txt');
-    final timestamp = DateTime.now().toIso8601String();
-    await logFile.writeAsString('[$timestamp] $message\n', mode: FileMode.append);
-  } catch (_) {
-    // Ignore logging errors
-  }
-}
-
 Future<void> main(List<String> args) async {
-  // Wrap everything in error handling for release debugging
-  FlutterError.onError = (details) async {
-    await _logToFile('FlutterError: ${details.exception}\n${details.stack}');
-    FlutterError.presentError(details);
-  };
+  WidgetsFlutterBinding.ensureInitialized();
 
-  runZonedGuarded(() async {
-    await _logToFile('App starting...');
+  // Create a container to initialize persisted settings before the app UI runs.
+  final container = ProviderContainer();
 
-    WidgetsFlutterBinding.ensureInitialized();
-    await _logToFile('WidgetsBinding initialized');
+  // Load persisted settings
+  await container.read(settingsProvider.notifier).loadFromPrefs();
+  await container.read(baseUrlProvider.notifier).loadFromPrefs();
 
-    // Create a container to initialize persisted settings before the app UI runs.
-    final container = ProviderContainer();
-    await _logToFile('ProviderContainer created');
+  // Initialize notification service
+  try {
+    await NotificationService.init();
+  } catch (e) {
+    // ignore: avoid_print
+    print('NotificationService init error: $e');
+  }
+  NotificationService.setNavigatorKey(navigatorKey);
 
-    // load persisted settings and base url
-    await container.read(settingsProvider.notifier).loadFromPrefs();
-    await _logToFile('Settings loaded');
-    await container.read(baseUrlProvider.notifier).loadFromPrefs();
-    await _logToFile('BaseURL loaded');
+  // TrayService (currently disabled on Linux)
+  try {
+    final tray = TrayService();
+    await tray.init(
+      onShow: () {},
+      onQuit: () async {
+        await tray.dispose();
+        exit(0);
+      },
+    );
+  } catch (e) {
+    // ignore: avoid_print
+    print('TrayService error: $e');
+  }
 
-    // Initialize notification service
-    try {
-      await NotificationService.init();
-      await _logToFile('NotificationService initialized');
-    } catch (e) {
-      await _logToFile('NotificationService init error: $e');
-    }
-    NotificationService.setNavigatorKey(navigatorKey);
-
-    // TrayService (currently disabled)
-    try {
-      final tray = TrayService();
-      await tray.init(
-        onShow: () {},
-        onQuit: () async {
-          await tray.dispose();
-          exit(0);
-        },
-      );
-      await _logToFile('TrayService initialized');
-    } catch (e) {
-      await _logToFile('TrayService error: $e');
-    }
-
-    await _logToFile('Running app...');
-
-    // Sync log before runApp
-    final logFile = File('${Directory.systemTemp.path}/onlinestatus_log.txt');
-    logFile.writeAsStringSync('[${DateTime.now().toIso8601String()}] About to call runApp\n', mode: FileMode.append);
-
-    runApp(UncontrolledProviderScope(container: container, child: const MyApp()));
-
-    logFile.writeAsStringSync('[${DateTime.now().toIso8601String()}] runApp returned (app running)\n', mode: FileMode.append);
-  }, (error, stack) async {
-    await _logToFile('Uncaught error: $error\n$stack');
-  });
+  runApp(UncontrolledProviderScope(container: container, child: const MyApp()));
 }
 
 class MyApp extends StatelessWidget {

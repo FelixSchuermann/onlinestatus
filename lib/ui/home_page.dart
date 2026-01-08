@@ -1,9 +1,6 @@
-import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// window_manager removed - causes segfaults on Linux
-// import 'package:window_manager/window_manager.dart';
 
 import 'package:onlinestatus2/providers/friends_provider.dart';
 import 'package:onlinestatus2/providers/settings_provider.dart';
@@ -25,32 +22,18 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   void initState() {
     super.initState();
-    _logSync('HomePage.initState called');
     _updateIdleStatus();
   }
 
-  void _logSync(String msg) {
-    try {
-      final logFile = File('${Directory.systemTemp.path}/onlinestatus_log.txt');
-      logFile.writeAsStringSync('[${DateTime.now().toIso8601String()}] $msg\n', mode: FileMode.append);
-    } catch (_) {}
-  }
-
   Future<void> _updateIdleStatus() async {
-    _logSync('_updateIdleStatus started');
     while (mounted) {
-      _logSync('_updateIdleStatus loop iteration');
       final seconds = await IdleService.getIdleTimeSeconds();
-      _logSync('Got idle seconds: $seconds');
       final status = await IdleService.getUserActivityStatus();
-      _logSync('Got status: $status');
       if (mounted) {
-        _logSync('About to call setState');
         setState(() {
           _idleSeconds = seconds;
           _idleStatus = status;
         });
-        _logSync('setState completed');
       }
       await Future.delayed(const Duration(seconds: 5));
     }
@@ -58,15 +41,10 @@ class _HomePageState extends ConsumerState<HomePage> {
 
   @override
   Widget build(BuildContext context) {
-    _logSync('build() called');
-
     // Start heartbeat service (auto-disposed when not watched)
-    _logSync('About to watch heartbeatServiceProvider');
     ref.watch(heartbeatServiceProvider);
-    _logSync('heartbeatServiceProvider watched');
 
-    // Register listener during build (allowed). This will be correctly managed by Riverpod.
-    _logSync('About to register friendsProvider listener');
+    // Register listener during build for notifications
     ref.listen<AsyncValue<List<Friend>>>(friendsProvider, (previous, next) {
       final prevList = previous?.whenOrNull(data: (d) => d);
       final nextList = next.whenOrNull(data: (d) => d);
@@ -76,38 +54,14 @@ class _HomePageState extends ConsumerState<HomePage> {
       for (final f in nextList) {
         final wasOnline = prevMap[f.name] ?? false;
         if (!wasOnline && f.online) {
-          // Show desktop notification
           NotificationService.showNotification('${f.name} is online', '${f.name} just came online');
         }
       }
     });
-    _logSync('friendsProvider listener registered');
 
-    _logSync('About to watch friendsProvider');
     final asyncFriends = ref.watch(friendsProvider);
-    _logSync('friendsProvider watched: ${asyncFriends.runtimeType}');
-
-    _logSync('About to watch settingsProvider');
     final settings = ref.watch(settingsProvider);
-    _logSync('settingsProvider watched');
 
-    _logSync('About to return Scaffold');
-
-    // TEMPORARY: Return minimal UI to debug crash
-    try {
-      _logSync('Creating minimal Scaffold');
-      final scaffold = Scaffold(
-        appBar: AppBar(title: const Text('Test')),
-        body: const Center(child: Text('Hello Linux')),
-      );
-      _logSync('Minimal Scaffold created, returning');
-      return scaffold;
-    } catch (e, st) {
-      _logSync('ERROR creating Scaffold: $e\n$st');
-      return const SizedBox.shrink();
-    }
-
-    /* ORIGINAL UI COMMENTED OUT FOR DEBUGGING
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -133,7 +87,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             IconButton(
               icon: const Icon(Icons.notification_add),
               onPressed: () async {
-                // Trigger a test notification for debugging
                 NotificationService.showNotification('Test Notification', 'This is a test from HomePage');
               },
               tooltip: 'Debug: show notification',
@@ -141,7 +94,6 @@ class _HomePageState extends ConsumerState<HomePage> {
             IconButton(
               icon: const Icon(Icons.send),
               onPressed: () async {
-                // Manually trigger a heartbeat
                 final service = ref.read(heartbeatServiceProvider);
                 final success = await service.sendNow();
                 if (context.mounted) {
@@ -153,28 +105,6 @@ class _HomePageState extends ConsumerState<HomePage> {
               tooltip: 'Debug: send heartbeat now',
             ),
           ],
-          IconButton(
-            icon: const Icon(Icons.minimize),
-            onPressed: () async {
-              if (Platform.isWindows || Platform.isLinux) {
-                final doHide = await showDialog<bool>(
-                  context: context,
-                  builder: (ctx) => AlertDialog(
-                    title: const Text('Minimize to tray'),
-                    content: const Text('Hide the window to the system tray?'),
-                    actions: [
-                      TextButton(onPressed: () => Navigator.of(ctx).pop(false), child: const Text('Cancel')),
-                      ElevatedButton(onPressed: () => Navigator.of(ctx).pop(true), child: const Text('OK')),
-                    ],
-                  ),
-                );
-                if (doHide == true) {
-                  await windowManager.hide();
-                }
-              }
-            },
-            tooltip: 'Minimize to tray',
-          ),
         ],
       ),
       body: asyncFriends.when(
@@ -185,7 +115,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           separatorBuilder: (_, __) => const Divider(height: 1),
           itemBuilder: (context, index) {
             final f = friends[index];
-            // Color based on state: green=online, orange=idle, red=offline
             final Color stateColor = switch (f.state) {
               FriendState.online => Colors.green,
               FriendState.idle => Colors.orange,
@@ -197,10 +126,7 @@ class _HomePageState extends ConsumerState<HomePage> {
               FriendState.offline => 'Last seen: ${_formatDate(f.lastSeen)}',
             };
             return ListTile(
-              leading: Icon(
-                Icons.circle,
-                color: stateColor,
-              ),
+              leading: Icon(Icons.circle, color: stateColor),
               title: Text(f.name),
               subtitle: Text(stateText),
             );
@@ -208,7 +134,6 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ),
     );
-    */ // END ORIGINAL UI COMMENT
   }
 
   Future<void> _openSettingsDialog(BuildContext context) async {
@@ -227,7 +152,6 @@ class _HomePageState extends ConsumerState<HomePage> {
           key: formKey,
           child: SingleChildScrollView(
             child: Column(mainAxisSize: MainAxisSize.min, children: [
-              // Show UUID (read-only)
               TextFormField(
                 initialValue: settings.uuid,
                 decoration: const InputDecoration(
@@ -277,11 +201,9 @@ class _HomePageState extends ConsumerState<HomePage> {
                 ref.read(settingsProvider.notifier).setAll(name: newName, token: newToken);
                 await ref.read(settingsProvider.notifier).saveToPrefs();
 
-                // close dialog - use ctx which is still valid
                 if (!ctx.mounted) return;
                 Navigator.of(ctx).pop();
 
-                // Heartbeat will automatically pick up new settings - use ctx for ScaffoldMessenger
                 if (ctx.mounted) {
                   ScaffoldMessenger.of(ctx).showSnackBar(
                     const SnackBar(content: Text('Settings saved! Heartbeat will use new name.')),
