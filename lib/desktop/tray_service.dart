@@ -18,7 +18,13 @@ class TrayService {
       'iVBORw0KGgoAAAANSUhEUgAAAAEAAAABCAQAAAC1HAwCAAAAC0lEQVR4nGNgYAAAAAMAASsJTYQAAAAASUVORK5CYII=';
 
   Future<void> init({required void Function() onShow, required void Function() onQuit}) async {
-    if (!(Platform.isWindows || Platform.isLinux)) return;
+    // system_tray 0.1.1 causes segmentation faults on Linux - disable it there
+    // Only enable on Windows for now
+    if (!Platform.isWindows) {
+      // ignore: avoid_print
+      print('TrayService: disabled on ${Platform.operatingSystem} (only Windows supported)');
+      return;
+    }
     if (_initialized) return;
     
     _onShow = onShow;
