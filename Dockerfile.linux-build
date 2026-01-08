@@ -22,7 +22,8 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     pkg-config \
     libgtk-3-dev \
-    # system_tray dependencies (use ayatana only - it's the newer replacement)
+    # system_tray dependencies - need BOTH for compatibility with older system_tray versions
+    libappindicator3-dev \
     libayatana-appindicator3-dev \
     libnotify-dev \
     # Additional useful tools
