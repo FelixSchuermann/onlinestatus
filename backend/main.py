@@ -18,6 +18,10 @@ origins = ["*"]
 # In production, set this via: export API_TOKEN="your-secure-token"
 API_TOKEN = os.environ.get("API_TOKEN", "dev-token-change-me")
 
+# Log masked token on startup for debugging
+_masked_token = f"{API_TOKEN[:4]}...{API_TOKEN[-4:]}" if len(API_TOKEN) > 8 else "(short)"
+print(f"[CONFIG] API_TOKEN: {_masked_token} (length: {len(API_TOKEN)})")
+
 # Production mode: disable docs/redoc pages
 # Set ENABLE_DOCS=true to enable them (for development)
 ENABLE_DOCS = os.environ.get("ENABLE_DOCS", "false").lower() == "true"
@@ -46,6 +50,14 @@ security = HTTPBearer()
 def verify_token(credentials: HTTPAuthorizationCredentials = Depends(security)) -> str:
     """Verify the Bearer token and return the token if valid."""
     token = credentials.credentials
+
+    # Debug logging (remove in production)
+    masked_received = f"{token[:4]}...{token[-4:]}" if len(token) > 8 else "(short)"
+    masked_expected = f"{API_TOKEN[:4]}...{API_TOKEN[-4:]}" if len(API_TOKEN) > 8 else "(short)"
+    print(f"[AUTH] Received token: {masked_received} (len={len(token)})")
+    print(f"[AUTH] Expected token: {masked_expected} (len={len(API_TOKEN)})")
+    print(f"[AUTH] Match: {token == API_TOKEN}")
+
     if token != API_TOKEN:
         raise HTTPException(
             status_code=status.HTTP_401_UNAUTHORIZED,
