@@ -1,0 +1,11 @@
+[Desktop Entry]
+Type=Application
+Name=Online Status
+Comment=Track online status of friends
+Exec=env LIBGL_ALWAYS_SOFTWARE=1 /home/USER/path/to/onlinestatus2/build/linux/x64/release/bundle/onlinestatus2
+Icon=/home/USER/path/to/onlinestatus2/assets/app_icon.png
+Terminal=false
+Categories=Network;Chat;
+StartupNotify=false
+X-GNOME-Autostart-enabled=true
+
