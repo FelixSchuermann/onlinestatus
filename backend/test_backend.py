@@ -157,6 +157,7 @@ def simulate_offline(user_uuid: str):
             return
         if resp.status_code == 404:
             print(f"✗ User not found: {user_uuid}")
+            print(f"  → Send a heartbeat first (option 1 or 2) to create the user")
         else:
             resp.raise_for_status()
             print(f"✓ {resp.json()['message']}")
@@ -173,6 +174,7 @@ def simulate_idle(user_uuid: str):
             return
         if resp.status_code == 404:
             print(f"✗ User not found: {user_uuid}")
+            print(f"  → Send a heartbeat first (option 1 or 2) to create the user")
         else:
             resp.raise_for_status()
             print(f"✓ {resp.json()['message']}")
