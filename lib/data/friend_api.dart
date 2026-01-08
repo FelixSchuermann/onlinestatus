@@ -1,17 +1,46 @@
+import 'dart:io';
 import 'package:dio/dio.dart';
+import 'package:dio/io.dart';
 
 import '../models/friend.dart';
 
 /// API client for the Online Status backend.
 ///
 /// All requests require a valid Bearer token for authentication.
-/// Note: Self-signed certificates are NOT supported on Linux.
-/// Use proper SSL certificates or HTTP for development.
+/// Supports HTTPS with self-signed certificates on all platforms.
 class FriendApiClient {
   final Dio _dio;
   String? _token;
+  static bool _sslConfigured = false;
 
-  FriendApiClient({Dio? dio}) : _dio = dio ?? Dio();
+  FriendApiClient({Dio? dio}) : _dio = dio ?? Dio() {
+    _configureSslIfNeeded();
+  }
+
+  /// Configure Dio to accept self-signed certificates.
+  /// Done lazily to avoid issues during app startup.
+  void _configureSslIfNeeded() {
+    if (_sslConfigured) return;
+    _sslConfigured = true;
+
+    try {
+      final adapter = IOHttpClientAdapter();
+      adapter.createHttpClient = () {
+        final client = HttpClient();
+        client.badCertificateCallback = (X509Certificate cert, String host, int port) {
+          // Accept all certificates (for self-signed certs)
+          return true;
+        };
+        return client;
+      };
+      _dio.httpClientAdapter = adapter;
+      // ignore: avoid_print
+      print('FriendApiClient: SSL configured to accept self-signed certificates');
+    } catch (e) {
+      // ignore: avoid_print
+      print('FriendApiClient: Could not configure SSL: $e');
+    }
+  }
 
 
   /// Set the base url to your backend, e.g. https://example.com:8443
