@@ -91,6 +91,22 @@ class _HomePageState extends ConsumerState<HomePage> {
     _logSync('settingsProvider watched');
 
     _logSync('About to return Scaffold');
+
+    // TEMPORARY: Return minimal UI to debug crash
+    try {
+      _logSync('Creating minimal Scaffold');
+      final scaffold = Scaffold(
+        appBar: AppBar(title: const Text('Test')),
+        body: const Center(child: Text('Hello Linux')),
+      );
+      _logSync('Minimal Scaffold created, returning');
+      return scaffold;
+    } catch (e, st) {
+      _logSync('ERROR creating Scaffold: $e\n$st');
+      return const SizedBox.shrink();
+    }
+
+    /* ORIGINAL UI COMMENTED OUT FOR DEBUGGING
     return Scaffold(
       appBar: AppBar(
         title: Column(
@@ -191,6 +207,7 @@ class _HomePageState extends ConsumerState<HomePage> {
         ),
       ),
     );
+    */ // END ORIGINAL UI COMMENT
   }
 
   Future<void> _openSettingsDialog(BuildContext context) async {

@@ -27,7 +27,7 @@ docker run --rm \
     -v "$SCRIPT_DIR:/app" \
     -w /app \
     "$IMAGE_NAME" \
-    sh -c "echo '=== Cleaning old build ===' && rm -rf build/linux && echo '=== Building ===' && flutter clean && flutter pub get && flutter build linux --release && echo '=== Build output ===' && ls -la build/linux/x64/release/bundle/ && chown -R $HOST_UID:$HOST_GID build/"
+    sh -c "flutter pub get && flutter build linux --debug && chown -R $HOST_UID:$HOST_GID build/"
 
 echo ""
 echo "=== Build complete ==="
