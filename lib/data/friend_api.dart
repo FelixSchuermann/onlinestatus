@@ -13,12 +13,25 @@ class FriendApiClient {
   String? _token;
   static bool _sslConfigured = false;
 
+  // Retry configuration
+  static const int _maxRetries = 3;
+  static const Duration _retryDelay = Duration(seconds: 2);
+
   FriendApiClient({Dio? dio}) : _dio = dio ?? Dio() {
+    _configureDio();
+  }
+
+  /// Configure Dio with timeouts and SSL settings.
+  void _configureDio() {
+    // Set timeouts
+    _dio.options.connectTimeout = const Duration(seconds: 10);
+    _dio.options.receiveTimeout = const Duration(seconds: 15);
+    _dio.options.sendTimeout = const Duration(seconds: 10);
+
     _configureSslIfNeeded();
   }
 
   /// Configure Dio to accept self-signed certificates.
-  /// Done lazily to avoid issues during app startup.
   void _configureSslIfNeeded() {
     if (_sslConfigured) return;
     _sslConfigured = true;
@@ -65,17 +78,53 @@ class FriendApiClient {
   /// Fetch the list of friends and their online status.
   ///
   /// Requires authentication token to be set via [setToken].
-  /// Throws [DioException] if request fails (including 401 Unauthorized).
+  /// Throws [DioException] if request fails after retries.
   Future<List<Friend>> fetchFriends() async {
-    final resp = await _dio.get(
-      '/online_status/',
-      options: Options(headers: _getAuthHeaders()),
-    );
-    final data = resp.data as Map<String, dynamic>;
-    final friends = (data['friends'] as List<dynamic>)
-        .map((m) => Friend.fromMap(Map<String, dynamic>.from(m as Map)))
-        .toList();
-    return friends;
+    // ignore: avoid_print
+    print('FriendApiClient.fetchFriends: baseUrl=${_dio.options.baseUrl}, hasToken=${_token?.isNotEmpty ?? false}');
+
+    Exception? lastError;
+
+    for (int attempt = 1; attempt <= _maxRetries; attempt++) {
+      try {
+        final resp = await _dio.get(
+          '/online_status/',
+          options: Options(headers: _getAuthHeaders()),
+        );
+        // ignore: avoid_print
+        print('FriendApiClient.fetchFriends: response status=${resp.statusCode}');
+        final data = resp.data as Map<String, dynamic>;
+        final friends = (data['friends'] as List<dynamic>)
+            .map((m) => Friend.fromMap(Map<String, dynamic>.from(m as Map)))
+            .toList();
+        // ignore: avoid_print
+        print('FriendApiClient.fetchFriends: got ${friends.length} friends');
+        return friends;
+      } catch (e, st) {
+        lastError = e as Exception;
+        // ignore: avoid_print
+        print('FriendApiClient.fetchFriends ERROR (attempt $attempt/$_maxRetries): $e');
+
+        // Don't retry on auth errors
+        if (e is DioException && e.response?.statusCode == 401) {
+          // ignore: avoid_print
+          print('FriendApiClient: Auth error, not retrying');
+          rethrow;
+        }
+
+        // Wait before retrying (except on last attempt)
+        if (attempt < _maxRetries) {
+          // ignore: avoid_print
+          print('FriendApiClient: Retrying in ${_retryDelay.inSeconds}s...');
+          await Future.delayed(_retryDelay);
+        }
+      }
+    }
+
+    // All retries failed
+    // ignore: avoid_print
+    print('FriendApiClient.fetchFriends: All retries failed');
+    throw lastError ?? Exception('Failed to fetch friends');
   }
 
   /// Send a heartbeat to the backend to indicate this user is online.
