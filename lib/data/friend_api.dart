@@ -11,7 +11,6 @@ import '../models/friend.dart';
 class FriendApiClient {
   final Dio _dio;
   String? _token;
-  static bool _sslConfigured = false;
 
   // Retry configuration
   static const int _maxRetries = 3;
@@ -28,14 +27,11 @@ class FriendApiClient {
     _dio.options.receiveTimeout = const Duration(seconds: 15);
     _dio.options.sendTimeout = const Duration(seconds: 10);
 
-    _configureSslIfNeeded();
+    _configureSsl();
   }
 
   /// Configure Dio to accept self-signed certificates.
-  void _configureSslIfNeeded() {
-    if (_sslConfigured) return;
-    _sslConfigured = true;
-
+  void _configureSsl() {
     try {
       final adapter = IOHttpClientAdapter();
       adapter.createHttpClient = () {
@@ -47,8 +43,6 @@ class FriendApiClient {
         return client;
       };
       _dio.httpClientAdapter = adapter;
-      // ignore: avoid_print
-      print('FriendApiClient: SSL configured to accept self-signed certificates');
     } catch (e) {
       // ignore: avoid_print
       print('FriendApiClient: Could not configure SSL: $e');

@@ -1,6 +1,7 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
+import 'dart:io';
 
 import 'package:onlinestatus2/providers/friends_provider.dart';
 import 'package:onlinestatus2/providers/settings_provider.dart';
@@ -8,6 +9,7 @@ import '../services/notification_service.dart';
 import '../services/idle_service.dart';
 import '../services/heartbeat_service.dart';
 import 'package:onlinestatus2/models/friend.dart';
+import 'package:onlinestatus2/main.dart' show trayService;
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -88,6 +90,22 @@ class _HomePageState extends ConsumerState<HomePage> {
           ],
         ),
         actions: [
+          // Minimize to tray button (Windows and Linux)
+          if (Platform.isWindows || Platform.isLinux)
+            IconButton(
+              icon: const Icon(Icons.minimize),
+              onPressed: () async {
+                if (trayService.isAvailable) {
+                  await trayService.minimizeToTray();
+                } else {
+                  // Fallback: show message
+                  ScaffoldMessenger.of(context).showSnackBar(
+                    const SnackBar(content: Text('Tray not available')),
+                  );
+                }
+              },
+              tooltip: 'Minimize to Tray',
+            ),
           IconButton(
             icon: const Icon(Icons.settings),
             onPressed: () => _openSettingsDialog(context),
