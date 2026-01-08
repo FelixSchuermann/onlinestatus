@@ -22,9 +22,8 @@ RUN apt-get update && apt-get install -y \
     ninja-build \
     pkg-config \
     libgtk-3-dev \
-    # system_tray dependencies - need BOTH for compatibility with older system_tray versions
+    # system_tray dependencies (libappindicator3-dev for older system_tray 0.1.1)
     libappindicator3-dev \
-    libayatana-appindicator3-dev \
     libnotify-dev \
     # Additional useful tools
     wget \
