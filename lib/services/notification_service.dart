@@ -1,13 +1,13 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
-import 'package:flutter_local_notifications/flutter_local_notifications.dart';
+// flutter_local_notifications is NOT supported on Linux - we use native solutions instead
+// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:window_manager/window_manager.dart';
 
 class NotificationService {
-  static final FlutterLocalNotificationsPlugin _plugin = FlutterLocalNotificationsPlugin();
+  // Plugin not used - Linux uses notify-send, Windows uses overlay toasts
   static bool _initialized = false;
-  static bool _pluginAvailable = false;
 
   // Optional navigator key to get an OverlayState for desktop toasts
   static GlobalKey<NavigatorState>? _navigatorKey;
@@ -15,31 +15,21 @@ class NotificationService {
 
   static Future<void> init() async {
     if (_initialized) return;
-    try {
-      // Initialize only Linux via the plugin API available in this project.
-      final linux = LinuxInitializationSettings(defaultActionName: 'Open');
-      final settings = InitializationSettings(linux: linux);
-      await _plugin.initialize(settings);
-      _pluginAvailable = true;
-      // ignore: avoid_print
-      print('NotificationService: plugin initialized, available=$_pluginAvailable');
-    } catch (e, st) {
-      _pluginAvailable = false;
-      // ignore: avoid_print
-      print('NotificationService.init error: $e');
-      // ignore: avoid_print
-      print(st);
-    }
+    // No plugin initialization needed - we use native OS notifications
+    // Linux: notify-send command
+    // Windows: overlay toast in app
+    // ignore: avoid_print
+    print('NotificationService: initialized (using native notifications)');
     _initialized = true;
   }
 
 
   static Future<void> showNotification(String title, String body) async {
-    // Ensure plugin initialized (attempt once)
+    // Ensure initialized
     if (!_initialized) await init();
     // Debug log
     // ignore: avoid_print
-    print('NotificationService: showNotification: $title - $body (pluginAvailable=$_pluginAvailable)');
+    print('NotificationService: showNotification: $title - $body');
 
     bool shownSystem = false;
 
