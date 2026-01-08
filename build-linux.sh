@@ -20,14 +20,26 @@ docker build -t "$IMAGE_NAME" -f Dockerfile.linux-build "$SCRIPT_DIR"
 
 echo ""
 echo "=== Building Flutter Linux release ==="
+echo "SCRIPT_DIR: $SCRIPT_DIR"
+echo "Mounting $SCRIPT_DIR to /app"
+
 docker run --rm \
     -v "$SCRIPT_DIR:/app" \
     -w /app \
     "$IMAGE_NAME" \
-    sh -c "flutter pub get && flutter build linux --release && chown -R $HOST_UID:$HOST_GID build/"
+    sh -c "echo '=== Container info ===' && pwd && echo '=== Mount check ===' && ls -la && echo '=== Building ===' && flutter pub get && flutter build linux --release && echo '=== Build output ===' && ls -la build/linux/x64/release/bundle/ && chown -R $HOST_UID:$HOST_GID build/"
 
 echo ""
 echo "=== Build complete ==="
 echo "Output: build/linux/x64/release/bundle/"
-ls -la build/linux/x64/release/bundle/
+
+# Check if build directory exists on host
+if [ -d "build/linux/x64/release/bundle" ]; then
+    echo "=== Files on host ==="
+    ls -la build/linux/x64/release/bundle/
+else
+    echo "WARNING: Build directory not found on host!"
+    echo "Checking build/ directory..."
+    ls -la build/ 2>/dev/null || echo "build/ directory does not exist"
+fi
 
