@@ -2,7 +2,8 @@ import 'dart:io';
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'package:window_manager/window_manager.dart';
+// window_manager removed - causes segfaults on Linux
+// import 'package:window_manager/window_manager.dart';
 
 import 'package:onlinestatus2/providers/friends_provider.dart';
 import 'package:onlinestatus2/providers/settings_provider.dart';

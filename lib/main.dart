@@ -1,17 +1,13 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-// ignore: unused_import
-import 'dart:convert';
-// ignore: unused_import
 import 'dart:async';
+import 'dart:io';
 
 import 'ui/home_page.dart';
 import 'package:onlinestatus2/providers/settings_provider.dart';
 import 'package:onlinestatus2/providers/friends_provider.dart';
 import 'package:onlinestatus2/services/notification_service.dart';
 import 'package:onlinestatus2/desktop/tray_service.dart';
-import 'package:window_manager/window_manager.dart';
-import 'dart:io';
 
 // Global navigator key so NotificationService can insert overlay toasts on desktop
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
@@ -40,7 +36,6 @@ Future<void> main(List<String> args) async {
     WidgetsFlutterBinding.ensureInitialized();
     await _logToFile('WidgetsBinding initialized');
 
-    // --- Main Window Logic ---
     // Create a container to initialize persisted settings before the app UI runs.
     final container = ProviderContainer();
     await _logToFile('ProviderContainer created');
@@ -58,43 +53,18 @@ Future<void> main(List<String> args) async {
     } catch (e) {
       await _logToFile('NotificationService init error: $e');
     }
-    // pass navigator key so overlay toasts may be shown
     NotificationService.setNavigatorKey(navigatorKey);
 
-    // Initialize window manager early so UI can call windowManager.hide()
-    if (Platform.isWindows || Platform.isLinux) {
-      try {
-        await windowManager.ensureInitialized();
-        await _logToFile('WindowManager initialized');
-        WindowOptions windowOptions = const WindowOptions(
-          size: Size(400, 500),
-          minimumSize: Size(300, 400),
-          center: true,
-          title: 'Online Status',
-        );
-        windowManager.waitUntilReadyToShow(windowOptions, () async {
-          await windowManager.show();
-          await windowManager.focus();
-          await _logToFile('Window shown');
-        });
-        windowManager.addListener(MyWindowListener());
-      } catch (e) {
-        await _logToFile('WindowManager error: $e');
-      }
-    }
-
+    // TrayService (currently disabled)
     try {
       final tray = TrayService();
-      await tray.init(onShow: () async {
-        if (Platform.isWindows || Platform.isLinux) {
-          await windowManager.show();
-          await windowManager.focus();
-        }
-      }, onQuit: () async {
-        await tray.dispose();
-        // ignore: avoid_slow_async_io
-        exit(0);
-      });
+      await tray.init(
+        onShow: () {},
+        onQuit: () async {
+          await tray.dispose();
+          exit(0);
+        },
+      );
       await _logToFile('TrayService initialized');
     } catch (e) {
       await _logToFile('TrayService error: $e');
@@ -102,19 +72,17 @@ Future<void> main(List<String> args) async {
 
     await _logToFile('Running app...');
 
-    // Add synchronous log before runApp to help debug crash point
+    // Sync log before runApp
     final logFile = File('${Directory.systemTemp.path}/onlinestatus_log.txt');
     logFile.writeAsStringSync('[${DateTime.now().toIso8601String()}] About to call runApp\n', mode: FileMode.append);
 
     runApp(UncontrolledProviderScope(container: container, child: const MyApp()));
 
-    // This will only be reached if runApp doesn't crash
     logFile.writeAsStringSync('[${DateTime.now().toIso8601String()}] runApp returned (app running)\n', mode: FileMode.append);
   }, (error, stack) async {
     await _logToFile('Uncaught error: $error\n$stack');
   });
 }
-
 
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
@@ -129,13 +97,5 @@ class MyApp extends StatelessWidget {
       ),
       home: const HomePage(),
     );
-  }
-}
-
-class MyWindowListener extends WindowListener {
-  @override
-  void onWindowClose() async {
-    // hide instead of close
-    await windowManager.hide();
   }
 }

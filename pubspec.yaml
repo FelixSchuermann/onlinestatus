@@ -40,7 +40,8 @@ dependencies:
   # system_tray removed - causes segfaults on Linux
   # system_tray: 0.1.1
   # flutter_local_notifications removed - not supported on Linux, using native notify-send instead
-  window_manager: ^0.2.6
+  # window_manager removed - causes segfaults on Linux
+  # window_manager: ^0.2.6
   image: ^4.0.17
   # win32 and ffi removed - caused segfaults on Linux
   # win32: ^5.15.0

@@ -1,9 +1,8 @@
 import 'dart:io';
 import 'dart:async';
 import 'package:flutter/material.dart';
-// flutter_local_notifications is NOT supported on Linux - we use native solutions instead
-// import 'package:flutter_local_notifications/flutter_local_notifications.dart';
-import 'package:window_manager/window_manager.dart';
+// window_manager removed - causes segfaults on Linux
+// import 'package:window_manager/window_manager.dart';
 
 class NotificationService {
   // Plugin not used - Linux uses notify-send, Windows uses overlay toasts
@@ -49,27 +48,10 @@ class NotificationService {
       }
     }
 
-    // Fallback to overlay toast (if main window visible)
+    // Fallback to overlay toast
     if (!shownSystem && (Platform.isWindows || Platform.isLinux)) {
       try {
-        bool isVisible = true;
-        try {
-          isVisible = await windowManager.isVisible();
-        } catch (e) {
-          // ignore: avoid_print
-          print('NotificationService: windowManager.isVisible check failed: $e');
-        }
-        // debug
-        // ignore: avoid_print
-        print('NotificationService: main window visible = $isVisible');
-
-        if (!isVisible) {
-          // main window hidden -> overlay toast won't be visible. Log and return.
-          // ignore: avoid_print
-          print('NotificationService: main window is hidden (probably in tray). Overlay toast will not be shown.');
-          return;
-        }
-
+        // Window visibility check disabled (window_manager removed)
         _showOverlayToast(title, body);
       } catch (e, st) {
         // ignore: avoid_print
