@@ -24,13 +24,25 @@ class _HomePageState extends ConsumerState<HomePage> {
   @override
   void initState() {
     super.initState();
+    _logSync('HomePage.initState called');
     _updateIdleStatus();
   }
 
+  void _logSync(String msg) {
+    try {
+      final logFile = File('${Directory.systemTemp.path}/onlinestatus_log.txt');
+      logFile.writeAsStringSync('[${DateTime.now().toIso8601String()}] $msg\n', mode: FileMode.append);
+    } catch (_) {}
+  }
+
   Future<void> _updateIdleStatus() async {
+    _logSync('_updateIdleStatus started');
     while (mounted) {
+      _logSync('_updateIdleStatus loop iteration');
       final seconds = await IdleService.getIdleTimeSeconds();
+      _logSync('Got idle seconds: $seconds');
       final status = await IdleService.getUserActivityStatus();
+      _logSync('Got status: $status');
       if (mounted) {
         setState(() {
           _idleSeconds = seconds;

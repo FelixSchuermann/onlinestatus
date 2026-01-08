@@ -101,7 +101,15 @@ Future<void> main(List<String> args) async {
     }
 
     await _logToFile('Running app...');
+
+    // Add synchronous log before runApp to help debug crash point
+    final logFile = File('${Directory.systemTemp.path}/onlinestatus_log.txt');
+    logFile.writeAsStringSync('[${DateTime.now().toIso8601String()}] About to call runApp\n', mode: FileMode.append);
+
     runApp(UncontrolledProviderScope(container: container, child: const MyApp()));
+
+    // This will only be reached if runApp doesn't crash
+    logFile.writeAsStringSync('[${DateTime.now().toIso8601String()}] runApp returned (app running)\n', mode: FileMode.append);
   }, (error, stack) async {
     await _logToFile('Uncaught error: $error\n$stack');
   });

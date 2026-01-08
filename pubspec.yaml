@@ -41,8 +41,9 @@ dependencies:
   # flutter_local_notifications removed - not supported on Linux, using native notify-send instead
   window_manager: ^0.2.6
   image: ^4.0.17
-  win32: ^5.15.0
-  ffi: ^2.1.4
+  # win32 and ffi removed - caused segfaults on Linux
+  # win32: ^5.15.0
+  # ffi: ^2.1.4
   uuid: 3.0.7
 
 dev_dependencies:
