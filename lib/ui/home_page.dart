@@ -19,6 +19,9 @@ class _HomePageState extends ConsumerState<HomePage> {
   String _idleStatus = 'checking...';
   int _idleSeconds = 0;
 
+  // Track users we've already notified about to avoid repeated notifications
+  final Set<String> _notifiedOnlineUsers = {};
+
   @override
   void initState() {
     super.initState();
@@ -46,15 +49,19 @@ class _HomePageState extends ConsumerState<HomePage> {
 
     // Register listener during build for notifications
     ref.listen<AsyncValue<List<Friend>>>(friendsProvider, (previous, next) {
-      final prevList = previous?.whenOrNull(data: (d) => d);
       final nextList = next.whenOrNull(data: (d) => d);
-      if (prevList == null || nextList == null) return;
+      if (nextList == null) return;
 
-      final prevMap = {for (var f in prevList) f.name: f.online};
       for (final f in nextList) {
-        final wasOnline = prevMap[f.name] ?? false;
-        if (!wasOnline && f.online) {
-          NotificationService.showNotification('${f.name} is online', '${f.name} just came online');
+        if (f.online) {
+          // Only notify if we haven't already notified about this user
+          if (!_notifiedOnlineUsers.contains(f.name)) {
+            _notifiedOnlineUsers.add(f.name);
+            NotificationService.showNotification('${f.name} is online', '${f.name} just came online');
+          }
+        } else {
+          // User went offline, remove from notified set so we can notify again when they come back
+          _notifiedOnlineUsers.remove(f.name);
         }
       }
     });
