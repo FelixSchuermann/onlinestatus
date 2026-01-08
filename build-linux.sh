@@ -27,7 +27,7 @@ docker run --rm \
     -v "$SCRIPT_DIR:/app" \
     -w /app \
     "$IMAGE_NAME" \
-    sh -c "echo '=== Container info ===' && pwd && echo '=== Mount check ===' && ls -la && echo '=== Building ===' && flutter pub get && flutter build linux --release && echo '=== Build output ===' && ls -la build/linux/x64/release/bundle/ && chown -R $HOST_UID:$HOST_GID build/"
+    sh -c "echo '=== Container info ===' && pwd && echo '=== Mount check ===' && ls -la && echo '=== Building ===' && flutter pub get && flutter build linux --release && echo '=== Finding bundle ===' && find / -type d -name 'bundle' 2>/dev/null && echo '=== Checking /app/build ===' && ls -la /app/build/ 2>/dev/null || echo 'No /app/build' && echo '=== Checking ./build ===' && ls -la ./build/ 2>/dev/null || echo 'No ./build'"
 
 echo ""
 echo "=== Build complete ==="
