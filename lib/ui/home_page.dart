@@ -9,7 +9,7 @@ import '../services/notification_service.dart';
 import '../services/idle_service.dart';
 import '../services/heartbeat_service.dart';
 import 'package:onlinestatus2/models/friend.dart';
-import 'package:onlinestatus2/main.dart' show trayService;
+import 'package:onlinestatus2/main.dart' show trayService, isDesktop;
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -90,8 +90,8 @@ class _HomePageState extends ConsumerState<HomePage> {
           ],
         ),
         actions: [
-          // Minimize to tray button (Windows and Linux)
-          if (Platform.isWindows || Platform.isLinux)
+          // Minimize to tray button (Desktop only: Windows, Linux, macOS)
+          if (isDesktop)
             IconButton(
               icon: const Icon(Icons.minimize),
               onPressed: () async {
