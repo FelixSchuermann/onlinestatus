@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'package:dio/dio.dart';
 import 'package:dio/io.dart';
+import 'package:flutter/foundation.dart' show kIsWeb;
 
 import '../models/friend.dart';
 
@@ -31,18 +32,25 @@ class FriendApiClient {
   }
 
   /// Configure Dio to accept self-signed certificates.
+  /// Works on desktop platforms and Android/iOS.
   void _configureSsl() {
+    // Skip SSL configuration on web
+    if (kIsWeb) return;
+
     try {
       final adapter = IOHttpClientAdapter();
       adapter.createHttpClient = () {
         final client = HttpClient();
         client.badCertificateCallback = (X509Certificate cert, String host, int port) {
           // Accept all certificates (for self-signed certs)
+          // In production, you should validate the certificate properly
           return true;
         };
         return client;
       };
       _dio.httpClientAdapter = adapter;
+      // ignore: avoid_print
+      print('FriendApiClient: SSL configured for ${Platform.operatingSystem}');
     } catch (e) {
       // ignore: avoid_print
       print('FriendApiClient: Could not configure SSL: $e');
