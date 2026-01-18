@@ -8,6 +8,7 @@ import 'package:ffi/ffi.dart';
 /// - Windows: Uses GetLastInputInfo via FFI (accurate)
 /// - Linux: Uses xprintidle command (requires: sudo apt install xprintidle)
 /// - macOS: Not supported (returns 'unknown')
+/// - Android/iOS: Mobile devices are considered always 'online' (no idle detection)
 class IdleService {
   // Threshold in seconds after which user is considered AFK
   static const int afkThresholdSeconds = 300; // 5 minutes
@@ -17,9 +18,18 @@ class IdleService {
   static DateTime? _lastCheck;
   static const _cacheDuration = Duration(seconds: 2);
 
+  // Check if running on a mobile platform
+  static bool get _isMobile => Platform.isAndroid || Platform.isIOS;
+
   /// Returns the number of seconds since the last user input (mouse/keyboard).
   /// Returns -1 if detection is not supported or fails.
+  /// Returns 0 on mobile (always considered active).
   static Future<int> getIdleTimeSeconds() async {
+    // Mobile devices: always considered active (return 0 = just used)
+    if (_isMobile) {
+      return 0;
+    }
+
     if (Platform.isWindows) {
       return _getWindowsIdleTime();
     } else if (Platform.isLinux) {
@@ -46,6 +56,11 @@ class IdleService {
 
   /// Get a status string: "online", "idle", or "unknown"
   static Future<String> getUserActivityStatus({int? thresholdSeconds}) async {
+    // Mobile devices are always considered online
+    if (_isMobile) {
+      return 'online';
+    }
+
     final idleTime = await getIdleTimeSeconds();
     if (idleTime < 0) {
       return 'unknown';
