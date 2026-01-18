@@ -52,6 +52,33 @@ final friendApiProvider = Provider<FriendApiClient>((ref) {
   return client;
 });
 
+/// Sort friends by online status (online > busy > idle > offline)
+/// Online/Busy/Idle: alphabetically by name
+/// Offline: by lastSeen (most recent first)
+List<Friend> _sortFriends(List<Friend> friends) {
+  final sorted = List<Friend>.from(friends);
+  sorted.sort((a, b) {
+    // First compare by state priority: online=0, busy=1, idle=2, offline=3
+    final stateOrder = {
+      FriendState.online: 0,
+      FriendState.busy: 1,
+      FriendState.idle: 2,
+      FriendState.offline: 3,
+    };
+    final stateCompare = stateOrder[a.state]!.compareTo(stateOrder[b.state]!);
+    if (stateCompare != 0) return stateCompare;
+
+    // For offline users, sort by lastSeen (most recent first)
+    if (a.state == FriendState.offline) {
+      return b.lastSeen.compareTo(a.lastSeen);
+    }
+
+    // For online/busy/idle users, sort alphabetically by name (case-insensitive)
+    return a.name.toLowerCase().compareTo(b.name.toLowerCase());
+  });
+  return sorted;
+}
+
 final friendsProvider = StreamProvider.autoDispose<List<Friend>>((ref) {
   final api = ref.watch(friendApiProvider);
   final controller = StreamController<List<Friend>>();
@@ -72,7 +99,7 @@ final friendsProvider = StreamProvider.autoDispose<List<Friend>>((ref) {
 
     try {
       final list = await api.fetchFriends();
-      controller.add(list);
+      controller.add(_sortFriends(list));
     } catch (e, st) {
       controller.addError(e, st);
     }
@@ -81,7 +108,7 @@ final friendsProvider = StreamProvider.autoDispose<List<Friend>>((ref) {
       if (!api.hasToken) return;
       try {
         final list = await api.fetchFriends();
-        if (!controller.isClosed) controller.add(list);
+        if (!controller.isClosed) controller.add(_sortFriends(list));
       } catch (e, st) {
         if (!controller.isClosed) controller.addError(e, st);
       }

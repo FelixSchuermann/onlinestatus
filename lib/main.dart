@@ -5,16 +5,25 @@ import 'ui/home_page.dart';
 import 'package:onlinestatus2/providers/settings_provider.dart';
 import 'package:onlinestatus2/providers/friends_provider.dart';
 import 'package:onlinestatus2/services/notification_service.dart';
+
+// Desktop-only imports (conditionally used)
 import 'package:onlinestatus2/desktop/tray_service.dart';
 import 'package:window_manager/window_manager.dart';
+
 // Global navigator key for overlay toasts
 final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
-// Global TrayService instance
+
+// Helper to check if running on desktop
+bool get isDesktop => Platform.isWindows || Platform.isLinux || Platform.isMacOS;
+
+// Global TrayService instance (only used on desktop)
 final TrayService trayService = TrayService();
+
 Future<void> main(List<String> args) async {
   WidgetsFlutterBinding.ensureInitialized();
-  // Initialize window manager on desktop platforms (Windows and Linux)
-  if (Platform.isWindows || Platform.isLinux) {
+
+  // Initialize window manager only on desktop platforms (Windows, Linux, macOS)
+  if (isDesktop) {
     await windowManager.ensureInitialized();
     // Set window options - compact size for status app
     const windowOptions = WindowOptions(
@@ -27,8 +36,8 @@ Future<void> main(List<String> args) async {
       title: 'OnlineStatus',
     );
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
+      // Start minimized to tray - don't show window
+      await windowManager.hide();
     });
   }
   // Create a container to initialize persisted settings before the app UI runs.
@@ -44,18 +53,22 @@ Future<void> main(List<String> args) async {
     print('NotificationService init error: $e');
   }
   NotificationService.setNavigatorKey(navigatorKey);
-  // Initialize TrayService (Windows and Linux)
-  try {
-    await trayService.init(
-      onQuit: () async {
-        await trayService.dispose();
-        exit(0);
-      },
-    );
-  } catch (e) {
-    // ignore: avoid_print
-    print('TrayService error: $e');
+
+  // Initialize TrayService only on desktop (Windows, Linux, macOS)
+  if (isDesktop) {
+    try {
+      await trayService.init(
+        onQuit: () async {
+          await trayService.dispose();
+          exit(0);
+        },
+      );
+    } catch (e) {
+      // ignore: avoid_print
+      print('TrayService error: $e');
+    }
   }
+
   runApp(UncontrolledProviderScope(container: container, child: const MyApp()));
 }
 class MyApp extends StatefulWidget {
@@ -64,25 +77,26 @@ class MyApp extends StatefulWidget {
   State<MyApp> createState() => _MyAppState();
 }
 class _MyAppState extends State<MyApp> with WindowListener {
-  bool get _isDesktop => Platform.isWindows || Platform.isLinux;
   @override
   void initState() {
     super.initState();
-    if (_isDesktop) {
+    if (isDesktop) {
       windowManager.addListener(this);
     }
   }
+
   @override
   void dispose() {
-    if (_isDesktop) {
+    if (isDesktop) {
       windowManager.removeListener(this);
     }
     super.dispose();
   }
+
   @override
   void onWindowClose() async {
     // On desktop, minimize to tray instead of closing
-    if (_isDesktop && trayService.isAvailable) {
+    if (isDesktop && trayService.isAvailable) {
       await trayService.minimizeToTray();
     } else {
       // Fallback: just exit

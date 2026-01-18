@@ -74,7 +74,7 @@ ONLINE_TIMEOUT_SECONDS = 300    # 5 minutes
 # --- Models ---    
 class Friend(BaseModel):
     name: str
-    state: str = Field(..., pattern="^(online|offline|idle)$")
+    state: str = Field(..., pattern="^(online|offline|idle|busy)$")
     last_seen: str
 
 class HeartbeatRequest(BaseModel):
@@ -83,8 +83,8 @@ class HeartbeatRequest(BaseModel):
     name: str = Field(..., description="Display name of the user")
     activity_state: str = Field(
         default="online",
-        pattern="^(online|idle|unknown)$",
-        description="User activity state: online (active), idle (AFK), unknown"
+        pattern="^(online|idle|busy|unknown)$",
+        description="User activity state: online (active), idle (AFK), busy (fullscreen/gaming), unknown"
     )
 
 class HeartbeatResponse(BaseModel):
@@ -148,6 +148,7 @@ def get_real_friends_list() -> List[dict]:
     The state reflects the user's activity:
     - "online": Active and recent heartbeat
     - "idle": AFK but recent heartbeat
+    - "busy": In fullscreen app (gaming, movie) but recent heartbeat
     - "offline": No recent heartbeat
     """
     now = datetime.utcnow()
@@ -160,6 +161,8 @@ def get_real_friends_list() -> List[dict]:
         # Determine final state
         if elapsed >= ONLINE_TIMEOUT_SECONDS:
             state = "offline"
+        elif activity_state == "busy":
+            state = "busy"
         elif activity_state == "idle":
             state = "idle"
         else:

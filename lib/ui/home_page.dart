@@ -1,7 +1,6 @@
 import 'package:flutter/foundation.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_riverpod/flutter_riverpod.dart';
-import 'dart:io';
 
 import 'package:onlinestatus2/providers/friends_provider.dart';
 import 'package:onlinestatus2/providers/settings_provider.dart';
@@ -9,7 +8,7 @@ import '../services/notification_service.dart';
 import '../services/idle_service.dart';
 import '../services/heartbeat_service.dart';
 import 'package:onlinestatus2/models/friend.dart';
-import 'package:onlinestatus2/main.dart' show trayService;
+import 'package:onlinestatus2/main.dart' show trayService, isDesktop;
 
 class HomePage extends ConsumerStatefulWidget {
   const HomePage({super.key});
@@ -58,9 +57,11 @@ class _HomePageState extends ConsumerState<HomePage> {
         final lastState = _lastKnownStates[f.name];
         final currentState = f.state;
 
-        // Only notify if user was offline (or unknown) and is now online/idle
+        // Only notify if user was offline (or unknown) and is now online/idle/busy
         final wasOffline = lastState == null || lastState == FriendState.offline;
-        final isNowOnline = currentState == FriendState.online || currentState == FriendState.idle;
+        final isNowOnline = currentState == FriendState.online ||
+                            currentState == FriendState.idle ||
+                            currentState == FriendState.busy;
 
         if (wasOffline && isNowOnline) {
           NotificationService.showNotification('${f.name} is online', '${f.name} just came online');
@@ -84,14 +85,18 @@ class _HomePageState extends ConsumerState<HomePage> {
               'You: ${settings.name.isNotEmpty ? settings.name : "unnamed"} ($_idleStatus, idle: ${_idleSeconds}s)',
               style: TextStyle(
                 fontSize: 12,
-                color: _idleStatus == 'online' ? Colors.green[200] : Colors.orange[200],
+                color: _idleStatus == 'online'
+                    ? Colors.green[200]
+                    : _idleStatus == 'busy'
+                        ? Colors.purple[200]
+                        : Colors.orange[200],
               ),
             ),
           ],
         ),
         actions: [
-          // Minimize to tray button (Windows and Linux)
-          if (Platform.isWindows || Platform.isLinux)
+          // Minimize to tray button (Desktop only: Windows, Linux, macOS)
+          if (isDesktop)
             IconButton(
               icon: const Icon(Icons.minimize),
               onPressed: () async {
@@ -146,11 +151,13 @@ class _HomePageState extends ConsumerState<HomePage> {
             final Color stateColor = switch (f.state) {
               FriendState.online => Colors.green,
               FriendState.idle => Colors.orange,
+              FriendState.busy => Colors.purple,
               FriendState.offline => Colors.red,
             };
             final String stateText = switch (f.state) {
               FriendState.online => 'Online',
               FriendState.idle => 'Idle (AFK)',
+              FriendState.busy => 'Potentially Busy (Fullscreen application)',
               FriendState.offline => 'Last seen: ${_formatDate(f.lastSeen)}',
             };
             return ListTile(

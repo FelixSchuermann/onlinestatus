@@ -2,6 +2,7 @@
 enum FriendState {
   online,   // Active and connected
   idle,     // Connected but AFK (no mouse/keyboard activity)
+  busy,     // Connected but in fullscreen app (gaming, movie, etc.)
   offline,  // Not connected (no recent heartbeat)
 }
 
@@ -14,14 +15,17 @@ class Friend {
 
   Friend({this.uuid, required this.name, required this.state, required this.lastSeen});
 
-  /// Convenience getter - true if online or idle (still "connected")
-  bool get online => state == FriendState.online || state == FriendState.idle;
+  /// Convenience getter - true if online, idle, or busy (still "connected")
+  bool get online => state == FriendState.online || state == FriendState.idle || state == FriendState.busy;
 
   /// True only if actively using the computer
   bool get isActive => state == FriendState.online;
 
   /// True if AFK but still connected
   bool get isIdle => state == FriendState.idle;
+
+  /// True if in fullscreen/gaming mode but still connected
+  bool get isBusy => state == FriendState.busy;
 
   /// True if disconnected
   bool get isOffline => state == FriendState.offline;
@@ -47,6 +51,7 @@ class Friend {
     final state = switch (stateStr) {
       'online' => FriendState.online,
       'idle' => FriendState.idle,
+      'busy' => FriendState.busy,
       'offline' => FriendState.offline,
       _ => FriendState.offline,
     };

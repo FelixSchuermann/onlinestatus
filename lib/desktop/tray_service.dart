@@ -10,7 +10,7 @@ class TrayService {
   SystemTray? _systemTray;
   bool _initialized = false;
   void Function()? _onQuit;
-  bool get _isDesktop => Platform.isWindows || Platform.isLinux;
+  bool get _isDesktop => Platform.isWindows || Platform.isLinux || Platform.isMacOS;
   Future<void> init({required void Function() onQuit}) async {
     if (!_isDesktop) {
       print('TrayService: Nicht auf Desktop-Plattform');
