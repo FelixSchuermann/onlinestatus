@@ -36,8 +36,8 @@ Future<void> main(List<String> args) async {
       title: 'OnlineStatus',
     );
     await windowManager.waitUntilReadyToShow(windowOptions, () async {
-      await windowManager.show();
-      await windowManager.focus();
+      // Start minimized to tray - don't show window
+      await windowManager.hide();
     });
   }
   // Create a container to initialize persisted settings before the app UI runs.
