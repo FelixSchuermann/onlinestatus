@@ -157,7 +157,7 @@ class _HomePageState extends ConsumerState<HomePage> {
             final String stateText = switch (f.state) {
               FriendState.online => 'Online',
               FriendState.idle => 'Idle (AFK)',
-              FriendState.busy => 'Busy (In Game/Fullscreen)',
+              FriendState.busy => 'Potentially Busy (Fullscreen application)',
               FriendState.offline => 'Last seen: ${_formatDate(f.lastSeen)}',
             };
             return ListTile(
