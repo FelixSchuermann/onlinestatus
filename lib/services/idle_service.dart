@@ -1,6 +1,7 @@
 import 'dart:io';
 import 'dart:ffi';
 import 'package:ffi/ffi.dart';
+import 'fullscreen_service.dart';
 
 /// Service to detect if the user is idle (AFK) or active at the computer.
 ///
@@ -54,11 +55,21 @@ class IdleService {
     return !(await isUserAfk(thresholdSeconds: thresholdSeconds));
   }
 
-  /// Get a status string: "online", "idle", or "unknown"
+  /// Get a status string: "online", "idle", "busy", or "unknown"
+  /// Priority: busy (fullscreen) > idle (AFK) > online (active)
   static Future<String> getUserActivityStatus({int? thresholdSeconds}) async {
     // Mobile devices are always considered online
     if (_isMobile) {
       return 'online';
+    }
+
+    // Check for fullscreen first (highest priority - user is "busy")
+    final isFullscreen = await FullscreenService.isFullscreenAppRunning();
+    if (isFullscreen) {
+      final appName = FullscreenService.currentFullscreenApp;
+      // ignore: avoid_print
+      print('IdleService: User is in fullscreen app: $appName');
+      return 'busy';
     }
 
     final idleTime = await getIdleTimeSeconds();
@@ -68,6 +79,15 @@ class IdleService {
     final threshold = thresholdSeconds ?? afkThresholdSeconds;
     return idleTime >= threshold ? 'idle' : 'online';
   }
+
+  /// Check if user is currently in a fullscreen application
+  static Future<bool> isUserInFullscreen() async {
+    if (_isMobile) return false;
+    return FullscreenService.isFullscreenAppRunning();
+  }
+
+  /// Get the name of the current fullscreen app (if any)
+  static String? get currentFullscreenApp => FullscreenService.currentFullscreenApp;
 
   // --- Linux Implementation using xprintidle ---
   static Future<int> _getLinuxIdleTime() async {
