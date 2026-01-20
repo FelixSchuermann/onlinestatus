@@ -192,8 +192,8 @@ class FullscreenService {
       final output = result.stdout.toString().trim();
       final stderr = result.stderr.toString().trim();
       
-      // Check for errors
-      if (output.startsWith('ERROR:')) {
+      // Check for errors (exit code or ERROR prefix)
+      if (result.exitCode != 0 || output.startsWith('ERROR:')) {
         // No active window or detection failed
         return (false, null);
       }
