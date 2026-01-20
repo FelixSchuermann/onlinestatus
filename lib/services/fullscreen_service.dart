@@ -164,37 +164,53 @@ class FullscreenService {
   // --- Linux Implementation using wmctrl/xdotool ---
   static Future<(bool, String?)> _detectLinuxFullscreen() async {
     try {
-      // Try using wmctrl first
+      // Try using xdotool and xprop
       final result = await Process.run('bash', [
         '-c',
         '''
         # Get active window ID
         ACTIVE_WIN=\$(xdotool getactivewindow 2>/dev/null)
         if [ -z "\$ACTIVE_WIN" ]; then
-          echo "no_window"
-          exit 0
+          echo "ERROR:no_window"
+          exit 1
         fi
         
-        # Get window name
-        WIN_NAME=\$(xdotool getwindowname "\$ACTIVE_WIN" 2>/dev/null)
+        # Get window name (properly quoted to handle special characters)
+        WIN_NAME=\$(xdotool getwindowname "\$ACTIVE_WIN" 2>/dev/null || echo "")
         
         # Check if window is fullscreen using xprop
-        FULLSCREEN=\$(xprop -id "\$ACTIVE_WIN" _NET_WM_STATE 2>/dev/null | grep -c "_NET_WM_STATE_FULLSCREEN")
-        
-        if [ "\$FULLSCREEN" -gt 0 ]; then
-          echo "fullscreen:\$WIN_NAME"
+        # Use grep -q for boolean check instead of grep -c
+        if xprop -id "\$ACTIVE_WIN" _NET_WM_STATE 2>/dev/null | grep -q "_NET_WM_STATE_FULLSCREEN"; then
+          # Use a delimiter that's unlikely to appear in window names
+          echo "FULLSCREEN|\$WIN_NAME"
         else
-          echo "windowed:\$WIN_NAME"
+          echo "WINDOWED|\$WIN_NAME"
         fi
         '''
       ]);
 
-      if (result.exitCode == 0) {
-        final output = result.stdout.toString().trim();
-        if (output.startsWith('fullscreen:')) {
-          final appName = output.substring(11);
-          return (true, appName.isEmpty ? null : appName);
-        }
+      final output = result.stdout.toString().trim();
+      final stderr = result.stderr.toString().trim();
+      
+      // Check for errors
+      if (output.startsWith('ERROR:')) {
+        // No active window or detection failed
+        return (false, null);
+      }
+      
+      // Parse the output with the new delimiter
+      if (output.startsWith('FULLSCREEN|')) {
+        final appName = output.substring(11); // Remove "FULLSCREEN|" prefix
+        return (true, appName.isEmpty ? null : appName);
+      } else if (output.startsWith('WINDOWED|')) {
+        final appName = output.substring(9); // Remove "WINDOWED|" prefix
+        return (false, appName.isEmpty ? null : appName);
+      }
+      
+      // Unexpected output format
+      if (stderr.isNotEmpty) {
+        // ignore: avoid_print
+        print('FullscreenService: Linux detection stderr: $stderr');
       }
       return (false, null);
     } catch (e) {
