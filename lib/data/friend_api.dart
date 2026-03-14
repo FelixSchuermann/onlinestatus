@@ -49,11 +49,8 @@ class FriendApiClient {
         return client;
       };
       _dio.httpClientAdapter = adapter;
-      // ignore: avoid_print
-      print('FriendApiClient: SSL configured for ${Platform.operatingSystem}');
     } catch (e) {
-      // ignore: avoid_print
-      print('FriendApiClient: Could not configure SSL: $e');
+      // SSL configuration failed, continuing without custom SSL settings
     }
   }
 
@@ -91,39 +88,26 @@ class FriendApiClient {
           '/online_status/',
           options: Options(headers: _getAuthHeaders()),
         );
-        // ignore: avoid_print
-        print('FriendApiClient.fetchFriends: response status=${resp.statusCode}');
         final data = resp.data as Map<String, dynamic>;
         final friends = (data['friends'] as List<dynamic>)
             .map((m) => Friend.fromMap(Map<String, dynamic>.from(m as Map)))
             .toList();
-        // ignore: avoid_print
-        print('FriendApiClient.fetchFriends: got ${friends.length} friends');
         return friends;
       } catch (e) {
         lastError = e as Exception;
-        // ignore: avoid_print
-        print('FriendApiClient.fetchFriends ERROR (attempt $attempt/$_maxRetries): $e');
 
         // Don't retry on auth errors
         if (e is DioException && e.response?.statusCode == 401) {
-          // ignore: avoid_print
-          print('FriendApiClient: Auth error, not retrying');
           rethrow;
         }
 
         // Wait before retrying (except on last attempt)
         if (attempt < _maxRetries) {
-          // ignore: avoid_print
-          print('FriendApiClient: Retrying in ${_retryDelay.inSeconds}s...');
           await Future.delayed(_retryDelay);
         }
       }
     }
 
-    // All retries failed
-    // ignore: avoid_print
-    print('FriendApiClient.fetchFriends: All retries failed');
     throw lastError ?? Exception('Failed to fetch friends');
   }
 
@@ -155,9 +139,6 @@ class FriendApiClient {
 
       return resp.statusCode == 200;
     } catch (e) {
-      // Log error but don't crash - heartbeat failure shouldn't break the app
-      // ignore: avoid_print
-      print('Heartbeat error: $e');
       return false;
     }
   }
