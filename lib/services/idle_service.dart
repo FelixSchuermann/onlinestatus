@@ -119,10 +119,6 @@ class IdleService {
       return -1;
     } catch (e) {
       // xprintidle probably not installed
-      // ignore: avoid_print
-      print('IdleService: Linux idle detection failed: $e');
-      // ignore: avoid_print
-      print('IdleService: Install xprintidle with: sudo apt install xprintidle');
       return -1;
     }
   }
@@ -159,8 +155,6 @@ class IdleService {
       calloc.free(lastInputInfo);
       return -1;
     } catch (e) {
-      // ignore: avoid_print
-      print('IdleService: Windows FFI error: $e');
       return -1;
     }
   }

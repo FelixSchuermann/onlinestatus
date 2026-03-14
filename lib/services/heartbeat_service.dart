@@ -57,8 +57,6 @@ class HeartbeatService {
     }
 
     if (!_api.hasToken) {
-      // ignore: avoid_print
-      print('HeartbeatService: Skipping heartbeat - no token configured');
       return false;
     }
 
