@@ -51,14 +51,10 @@ class HeartbeatService {
   /// Send a single heartbeat now.
   Future<bool> _sendHeartbeat() async {
     if (_settings.name.isEmpty || _settings.uuid.isEmpty) {
-      // ignore: avoid_print
-      print('HeartbeatService: Skipping heartbeat - name or uuid not configured');
       return false;
     }
 
     if (!_api.hasToken) {
-      // ignore: avoid_print
-      print('HeartbeatService: Skipping heartbeat - no token configured');
       return false;
     }
 
@@ -66,15 +62,11 @@ class HeartbeatService {
     final activityState = await IdleService.getUserActivityStatus();
     _lastActivityState = activityState;
 
-    final success = await _api.sendHeartbeat(
+    return _api.sendHeartbeat(
       uuid: _settings.uuid,
       name: _settings.name,
       activityState: activityState,
     );
-
-    // ignore: avoid_print
-    print('HeartbeatService: Heartbeat ${success ? "sent" : "failed"} for ${_settings.name} (state: $activityState)');
-    return success;
   }
 
   /// Manually trigger a heartbeat (for testing).
